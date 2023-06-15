@@ -270,11 +270,9 @@ class PageEncryption {
 		} else {
 			$title = $rev->getPageAsLinkTarget();
 		}
-		// $contextTitle = RequestContext::getMain()->getTitle();
-		// Special:Badtitle/dummy title for API calls set in api.php
-		// if ( $contextTitle && strpos( $contextTitle->getFullText(), 'Special:Badtitle/') !== 0 && $contextTitle !== $title ) {
-		// 	return $rev;
-		// }
+
+		$isSamePage = ( RequestContext::getMain()->getTitle() === $title );
+
 		$cacheKey = $rev->getId();
 		if ( array_key_exists( $cacheKey, self::$cachedMockUpRev ) ) {
 			return self::$cachedMockUpRev[$cacheKey];
@@ -297,18 +295,23 @@ class PageEncryption {
 			} elseif ( !empty( $_GET['acode'] ) ) {
 				$text = self::decryptFromAccessCode( $pageId, $_GET['acode'] );
 			} else {
-				self::$decryptionNotice = self::EncryptedPage;
+				if ( $isSamePage ) {
+					self::$decryptionNotice = self::EncryptedPage;
+				}
 				return self::$cachedMockUpRev[$cacheKey] = $rev;
 			}
 			if ( $text !== false ) {
-				self::$decryptionNotice = self::DecryptionFromAccessCode;
+				if ( $isSamePage ) {
+					self::$decryptionNotice = self::DecryptionFromAccessCode;
+				}
 			}
 		} else {
 			$text = self::decryptSymmetric( $text );
 		}
 		if ( $text === false ) {
-			// @TODO is there a better way ?
-			self::$decryptionNotice = self::DecryptionFailed;
+			if ( $isSamePage ) {
+				self::$decryptionNotice = self::DecryptionFailed;
+			}
 			return self::$cachedMockUpRev[$cacheKey] = $rev;
 		}
 		// should be instance of text
