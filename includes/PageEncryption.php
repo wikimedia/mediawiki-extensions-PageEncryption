@@ -306,8 +306,10 @@ class PageEncryption {
 			$title = $rev->getPageAsLinkTarget();
 		}
 
-		if ( RequestContext::getMain()->getTitle() !== $title ) {
-			return $rev;  
+		$contextTitle = RequestContext::getMain()->getTitle();
+		// Special:Badtitle/dummy title for API calls set in api.php
+		if ( strpos( $contextTitle->getFullText(), 'Special:Badtitle/') !== 0 && $contextTitle !== $title ) {
+			return $rev;
 		}
 
 		$cacheKey = $rev->getId();
