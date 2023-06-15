@@ -188,11 +188,15 @@ class PageEncryptionHooks {
 			return true;
 		}
 		
-		if ( $action !== 'edit' ) {
+		if ( $action !== 'edit' && $action !== 'create' ) {
 			return true;
 		}
 
-		if ( !$title->isKnown() || \PageEncryption::isEditor( $title, $user ) ) {
+		if ( !$title->isKnown() && $user->isAllowed( 'pageencryption-cancreateencryption' ) ) {
+			return true;
+		}
+
+		if (\PageEncryption::isEditor( $title, $user ) ) {
 			return true;
 		}
 
@@ -392,10 +396,6 @@ class PageEncryptionHooks {
 		$title = $skinTemplate->getTitle();
 
 		if ( !$title->isKnown() || $title->isSpecialPage() ) {
-			return;
-		}
-		
-		if ( !\PageEncryption::isEncryptedNamespace( $title ) ) {
 			return;
 		}
 

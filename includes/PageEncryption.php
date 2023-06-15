@@ -270,9 +270,7 @@ class PageEncryption {
 		} else {
 			$title = $rev->getPageAsLinkTarget();
 		}
-
 		$isSamePage = ( RequestContext::getMain()->getTitle() === $title );
-
 		$cacheKey = $rev->getId();
 		if ( array_key_exists( $cacheKey, self::$cachedMockUpRev ) ) {
 			return self::$cachedMockUpRev[$cacheKey];
@@ -280,7 +278,7 @@ class PageEncryption {
 		
 		$content = $rev->getSlot( MediaWiki\Revision\SlotRecord::MAIN )->getContent();    
 		$text = $content->getText();
-		$pageId = $title->getArticleId();
+		$pageId = $title->getId();
 		if ( $rev->getUser()->getId() !== self::getUser()->getId() ) {
 			$cookieKey = self::$cookieUserKey . '-acode-' . $pageId;
 			$context = RequestContext::getMain();
