@@ -394,6 +394,10 @@ class PageEncryptionHooks {
 		if ( !$title->isKnown() || $title->isSpecialPage() ) {
 			return;
 		}
+		
+		if ( !\PageEncryption::isEncryptedNamespace( $title ) ) {
+			return;
+		}
 
 		if ( !\PageEncryption::isEditor( $title, $user ) || !$user->isAllowed( 'pageencryption-cancreateencryption' ) ) {
 			return;
