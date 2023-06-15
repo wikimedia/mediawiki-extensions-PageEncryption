@@ -1,0 +1,135 @@
+{
+	"name": "PageEncryption",
+	"author": "thomas-topway-it",
+	"version": "1.0",
+	"url": "https://www.mediawiki.org/wiki/Extension:PageEncryption",
+	"descriptionmsg": "pageencryption-extension-desc",
+	"license-name": "GPL-2.0-or-later",
+	"requires": {
+		"MediaWiki": ">= 1.35.0"
+	},
+	"MessagesDirs": {
+		"PageEncryption": [
+			"i18n"
+		]
+	},
+	"callback": "PageEncryptionHooks::onRegistration",
+	"AutoloadClasses": {
+		"PageEncryptionArticle": "includes/PageEncryptionArticle.php",
+		"PageEncryptionRevisionLookup": "includes/PageEncryptionRevisionLookup.php",
+		"PageEncryptionPage": "includes/PageEncryptionPage.php",
+		"PageEncryptionHooks": "includes/PageEncryptionHooks.php",
+		"PageEncryption": "includes/PageEncryption.php",
+		"SpecialPageEncryptionPermissions": "includes/specials/SpecialPageEncryptionPermissions.php",
+		"PageEncryptionApiSetEncryptionKey": "includes/api/PageEncryptionApiSetEncryptionKey.php",
+		"PageEncryptionApiCheckLatestVersion": "includes/api/PageEncryptionApiCheckLatestVersion.php"
+	},
+	"ExtensionMessagesFiles": {
+		"PageEncryptionAlias": "PageEncryption.alias.php",
+		"PageEncryptionMagic": "PageEncryptionMagic.i18n.magic.php"
+	},
+	"Hooks": {
+		"BeforeInitialize": "PageEncryptionHooks::onBeforeInitialize",
+		"AlternateEdit": "PageEncryptionHooks::onAlternateEdit",
+		"ParserAfterTidy": "PageEncryptionHooks::onParserAfterTidy",
+		"getUserPermissionsErrors": "PageEncryptionHooks::onGetUserPermissionsErrors",
+		"MediaWikiServices": "PageEncryptionHooks::onMediaWikiServices",
+		"MultiContentSave": "PageEncryptionHooks::onMultiContentSave",		
+		"RejectParserCacheValue": "PageEncryptionHooks::onRejectParserCacheValue",
+		"SiteNoticeBefore": "PageEncryptionHooks::onSiteNoticeBefore",
+		"LoadExtensionSchemaUpdates": "PageEncryptionHooks::onLoadExtensionSchemaUpdates",
+		"BeforePageDisplay": "PageEncryptionHooks::onBeforePageDisplay",
+		"SkinTemplateNavigation::Universal": "PageEncryptionHooks::onSkinTemplateNavigation",
+		"SkinBuildSidebar": "PageEncryptionHooks::onSkinBuildSidebar",
+		"UserLogoutComplete": "PageEncryptionHooks::onUserLogoutComplete"
+	},
+	"SpecialPages": {
+		"PageEncryptionPermissions": "SpecialPageEncryptionPermissions"
+	},
+	"APIModules": {
+		"pageencryption-set-encryption-key": "PageEncryptionApiSetEncryptionKey",
+		"pageencryption-check-latest-version": "PageEncryptionApiCheckLatestVersion"
+	},
+	"namespaces": [
+		{
+			"id": 2246,
+			"constant": "NS_PAGEENCRYPTION",
+			"name": "Encrypted"
+		},
+		{
+			"id": 2277,
+			"constant": "NS_PAGEENCRYPTION_TALK",
+			"name": "Encrypted talk"
+		}
+	],
+	"GroupPermissions": {
+		"user": {
+			"pageencryption-cancreateencryption": true
+		}
+	},
+	"AddGroups": {
+	},
+	"RemoveGroups": {
+	},
+	"AvailableRights": [
+		"pageencryption-cancreateencryption"
+	],
+	"ResourceFileModulePaths": {
+		"localBasePath": "resources",
+		"remoteExtPath": "PageEncryption/resources"
+	},
+	"ResourceModules": {
+		"ext.PageEncryptionPassword": {
+			"position": "top",
+			"scripts": [
+				"PageEncryptionPasswordValidator.js",
+				"PageEncryptionPassword.js"
+			],
+			"styles": [
+				"style.css"
+			],
+			"dependencies": [
+				"oojs-ui-core",
+				"oojs-ui-widgets",
+				"mediawiki.storage",
+				"oojs-ui-toolbars",
+				"oojs-ui-windows"
+			],
+			"messages": [
+				"pageencryption-jsmodule-dialog-save",
+				"pageencryption-jsmodule-dialog-cancel",
+				"pageencryption-jsmodule-dialog-field-password",
+				"pageencryption-jsmodule-dialog-field-password-reenter",
+				"pageencryption-jsmodule-dialog-field-password-reset",
+				"pageencryption-jsmodule-lost-password",
+				"pageencryption-jsmodule-dialog-password",
+				"pageencryption-jsmodule-dialog-password-confirmation",
+				"pageencryption-jsmodule-dialog-password-error-length",
+				"pageencryption-jsmodule-dialog-password-error-digit",
+				"pageencryption-jsmodule-dialog-password-error-special",
+				"pageencryption-jsmodule-dialog-password-error-prohibited",
+				"pageencryption-jsmodule-dialog-password-error-nomatch",
+				"pageencryption-jsmodule-dialog-goback"	
+			]
+		},
+		"ext.PageEncryptionPermissions": {
+			"position": "top",
+			"scripts": [
+				"PageEncryptionPermissions.js"
+			],
+			"styles": [
+				"style.css"
+			],
+			"dependencies": [
+				"oojs-ui-core",
+				"oojs-ui-widgets"
+			],
+			"messages": [
+				"pageencryption-jsmodule-pageproperties-outdated-version",
+				"pageencryption-jsmodule-deleteitemconfirm",
+				"pageencryption-jsmodule-managepermissions-copied-to-clipboard"
+			]
+		}
+	},
+	"manifest_version": 1
+}
