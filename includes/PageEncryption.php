@@ -265,6 +265,12 @@ class PageEncryption {
 	 * @return 
 	 */
 	public static function mockUpRevision( $rev ) {
+          	try {
+			self::getUser()->getId();
+		} catch ( Exception $e ) {
+			return self::$cachedMockUpRev[$cacheKey] = $rev;
+		}
+
 		if ( method_exists( RevisionStore::class, 'getPage' ) ) {
 			$title = $rev->getPage();
 		} else {
