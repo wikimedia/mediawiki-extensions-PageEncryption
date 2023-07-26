@@ -265,7 +265,8 @@ class PageEncryption {
 	 * @return 
 	 */
 	public static function mockUpRevision( $rev ) {
-          	try {
+		// *** prevents error "Sessions are disabled for load entry point"
+		try {
 			self::getUser()->getId();
 		} catch ( Exception $e ) {
 			return self::$cachedMockUpRev[$cacheKey] = $rev;
