@@ -283,7 +283,12 @@ class PageEncryption {
 			return self::$cachedMockUpRev[$cacheKey];
 		}
 		
-		$content = $rev->getSlot( MediaWiki\Revision\SlotRecord::MAIN )->getContent();    
+		$content = $rev->getSlot( MediaWiki\Revision\SlotRecord::MAIN )->getContent();
+
+		if ( !( $content instanceof TextContent ) ) {
+			return self::$cachedMockUpRev[$cacheKey] = $rev;
+		}
+
 		$text = $content->getText();
 		$pageId = $title->getId();
 		if ( $rev->getUser()->getId() !== self::getUser()->getId() ) {
