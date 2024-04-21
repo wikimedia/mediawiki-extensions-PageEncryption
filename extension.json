@@ -34,7 +34,7 @@
 		"ParserAfterTidy": "PageEncryptionHooks::onParserAfterTidy",
 		"getUserPermissionsErrors": "PageEncryptionHooks::onGetUserPermissionsErrors",
 		"MediaWikiServices": "PageEncryptionHooks::onMediaWikiServices",
-		"MultiContentSave": "PageEncryptionHooks::onMultiContentSave",		
+		"MultiContentSave": "PageEncryptionHooks::onMultiContentSave",
 		"RejectParserCacheValue": "PageEncryptionHooks::onRejectParserCacheValue",
 		"SiteNoticeBefore": "PageEncryptionHooks::onSiteNoticeBefore",
 		"LoadExtensionSchemaUpdates": "PageEncryptionHooks::onLoadExtensionSchemaUpdates",
@@ -109,7 +109,7 @@
 				"pageencryption-jsmodule-dialog-password-error-special",
 				"pageencryption-jsmodule-dialog-password-error-prohibited",
 				"pageencryption-jsmodule-dialog-password-error-nomatch",
-				"pageencryption-jsmodule-dialog-goback"	
+				"pageencryption-jsmodule-dialog-goback"
 			]
 		},
 		"ext.PageEncryptionPermissions": {
