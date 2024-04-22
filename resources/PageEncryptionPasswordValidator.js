@@ -21,7 +21,7 @@
  */
 
 // @credits https://github.com/briannippert/Password-Validator/blob/master/PasswordValidatorv2.js
-const PageEncryptionPasswordValidator = function (conf) {
+const PageEncryptionPasswordValidator = function ( conf ) {
 	var conf = $.extend(
 		{
 			minSize: 5,
@@ -31,76 +31,75 @@ const PageEncryptionPasswordValidator = function (conf) {
 			digitConfigured: true,
 			specialConfigured: true,
 			prohibitedConfigured: true,
-			specialCharacters: ["_", "#", "%", "*", "@"],
-			prohibitedCharacters: ["$", "&", "=", "!"],
+			specialCharacters: [ '_', '#', '%', '*', '@' ],
+			prohibitedCharacters: [ '$', '&', '=', '!' ]
 		},
 		conf || {}
 	);
 
-	function checkPassword(value) {
-		var length = conf.lengthConfigured ? checkLength(value) : true;
-		var upper = conf.uppercaseConfigured ? checkUpperCase(value) : true;
-		var digit = conf.digitConfigured ? checkDigit(value) : true;
-		var special = conf.specialConfigured ? checkSpecialCharacters(value) : true;
-		var prohibited = conf.prohibitedConfigured
-			? checkProhibitedCharacter(value)
-			: true;
+	function checkPassword( value ) {
+		var length = conf.lengthConfigured ? checkLength( value ) : true;
+		var upper = conf.uppercaseConfigured ? checkUpperCase( value ) : true;
+		var digit = conf.digitConfigured ? checkDigit( value ) : true;
+		var special = conf.specialConfigured ? checkSpecialCharacters( value ) : true;
+		var prohibited = conf.prohibitedConfigured ?
+			checkProhibitedCharacter( value ) :
+			true;
 
 		var errors = [];
-		if (!length) {
-			errors.push("length");
+		if ( !length ) {
+			errors.push( 'length' );
 		}
-		if (!upper) {
-			errors.push("uppercase");
+		if ( !upper ) {
+			errors.push( 'uppercase' );
 		}
-		if (!digit) {
-			errors.push("digit");
+		if ( !digit ) {
+			errors.push( 'digit' );
 		}
-		if (!special) {
-			errors.push("special");
+		if ( !special ) {
+			errors.push( 'special' );
 		}
-		if (prohibited) {
-			errors.push("prohibited");
+		if ( prohibited ) {
+			errors.push( 'prohibited' );
 		}
 
 		return errors;
 	}
 
-	function checkSpecialCharacters(str) {
+	function checkSpecialCharacters( str ) {
 		// var specialChar = new RegExp("[_\\-#%*\\+]");
-		var specialChar = new RegExp("[" + conf.specialCharacters.join("") + "]");
+		var specialChar = new RegExp( '[' + conf.specialCharacters.join( '' ) + ']' );
 
-		return specialChar.test(str);
+		return specialChar.test( str );
 	}
 
-	function checkProhibitedCharacter(str) {
+	function checkProhibitedCharacter( str ) {
 		// var specialChar = new RegExp("[$&=!@]");//= /[$&=!@]/;
 		var specialChar = new RegExp(
-			"[" + conf.prohibitedCharacters.join("") + "]"
+			'[' + conf.prohibitedCharacters.join( '' ) + ']'
 		);
 
-		return specialChar.test(str);
+		return specialChar.test( str );
 	}
 
-	function checkDigit(str) {
-		return /\d/.test(str);
+	function checkDigit( str ) {
+		return /\d/.test( str );
 	}
 
-	function checkUpperCase(str) {
-		return /[^A-Z]/.test(str);
+	function checkUpperCase( str ) {
+		return /[^A-Z]/.test( str );
 	}
 
-	function checkLength(str) {
+	function checkLength( str ) {
 		return str.length >= conf.minSize && str.length <= conf.maxSize;
 	}
-	
-	function getConf(str) {
+
+	function getConf( str ) {
 		return conf;
 	}
 
 	return {
 		checkPassword,
-		getConf,
+		getConf
 	};
 };
-

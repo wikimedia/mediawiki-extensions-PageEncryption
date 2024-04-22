@@ -21,21 +21,19 @@
  * @author thomas-topway-it <support@topway.it>
  * @copyright Copyright ©2023, https://wikisphere.org
  */
- 
+
 if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
 	include_once __DIR__ . '/../vendor/autoload.php';
 }
 
-use MediaWiki\DAO\WikiAwareEntity;
-use MediaWiki\MediaWikiServices;
 use MediaWiki\Logger\LoggerFactory;
-use Psr\Log\NullLogger;
+use MediaWiki\MediaWikiServices;
 
 class PageEncryptionHooks {
 
 	/** @var encryptedNamespace */
 	public static $encryptedNamespace = 2246;
-	
+
 	/** @var admins */
 	public static $admins = [ 'sysop', 'bureaucrat', 'interface-admin' ];
 
@@ -67,7 +65,7 @@ class PageEncryptionHooks {
 			}
 		}
 	}
-	
+
 	/**
 	 * @param MediaWikiServices $services
 	 * @return void
@@ -107,11 +105,11 @@ class PageEncryptionHooks {
 			);
 
 		// MW 1.36 and MW 1.37 have the same interface
-		} else if ( version_compare( MW_VERSION, '1.38', '<' ) ) {
+		} elseif ( version_compare( MW_VERSION, '1.38', '<' ) ) {
 			$actorStoreFactory = $services->getActorStoreFactory();
 			$pageStoreFactory = $services->getPageStoreFactory();
 			$titleFactory = $services->getTitleFactory();
-			
+
 			$pageEncryptionRevisionLookup = new PageEncryptionRevisionLookup(
 				$dbLoadBalancerFactory->getMainLB( $dbDomain ),
 				$blobStoreFactory->newSqlBlobStore( $dbDomain ),
@@ -128,14 +126,14 @@ class PageEncryptionHooks {
 				$hookContainer,
 				$dbDomain
 			);
-			
+
 		// MW 1.38, 1.39 and 1.40 have the same interface
 		} else {
 			$localCache = $services->getLocalServerObjectCache();
 			$actorStoreFactory = $services->getActorStoreFactory();
 			$pageStoreFactory = $services->getPageStoreFactory();
 			$titleFactory = $services->getTitleFactory();
-		
+
 			$pageEncryptionRevisionLookup = new PageEncryptionRevisionLookup(
 				$dbLoadBalancerFactory->getMainLB( $dbDomain ),
 				$blobStoreFactory->newSqlBlobStore( $dbDomain ),
@@ -151,18 +149,17 @@ class PageEncryptionHooks {
 				$pageStoreFactory->getPageStore( $dbDomain ),
 				$titleFactory,
 				$hookContainer,
-				$dbDomain,	// $wikiId = WikiAwareEntity::LOCAL
+				$dbDomain, // $wikiId = WikiAwareEntity::LOCAL
 			);
 		}
-			
-		$services->redefineService( 'RevisionLookup', static function() use( $pageEncryptionRevisionLookup ) {
-			return $pageEncryptionRevisionLookup;
-		} );
-			
-		$services->redefineService( 'RevisionStore', static function() use( $pageEncryptionRevisionLookup ) {
+
+		$services->redefineService( 'RevisionLookup', static function () use( $pageEncryptionRevisionLookup ) {
 			return $pageEncryptionRevisionLookup;
 		} );
 
+		$services->redefineService( 'RevisionStore', static function () use( $pageEncryptionRevisionLookup ) {
+			return $pageEncryptionRevisionLookup;
+		} );
 	}
 
 	/**
@@ -179,7 +176,6 @@ class PageEncryptionHooks {
 	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/getUserPermissionsErrors
 	 */
 	public static function onGetUserPermissionsErrors( $title, $user, $action, &$result ) {
-		
 		// if ( \PageEncryption::isAuthorized( $user ) ) {
 		// 	return true;
 		// }
@@ -187,7 +183,7 @@ class PageEncryptionHooks {
 		if ( !\PageEncryption::isEncryptedNamespace( $title ) ) {
 			return true;
 		}
-		
+
 		if ( $action !== 'edit' && $action !== 'create' ) {
 			return true;
 		}
@@ -196,7 +192,7 @@ class PageEncryptionHooks {
 			return true;
 		}
 
-		if (\PageEncryption::isEditor( $title, $user ) ) {
+		if ( \PageEncryption::isEditor( $title, $user ) ) {
 			return true;
 		}
 
@@ -207,8 +203,9 @@ class PageEncryptionHooks {
 	/**
 	 * @param EditPage $editpage
 	 */
-	public static function onAlternateEdit( EditPage $editpage ) { }
-	
+	public static function onAlternateEdit( EditPage $editpage ) {
+	}
+
 	/**
 	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/MultiContentSave
 	 * @param RenderedRevision $renderedRevision
@@ -221,7 +218,7 @@ class PageEncryptionHooks {
 	public static function onMultiContentSave( MediaWiki\Revision\RenderedRevision $renderedRevision, MediaWiki\User\UserIdentity $user, CommentStoreComment $summary, $flags, Status $hookStatus ) {
 		$revisionRecord = $renderedRevision->getRevision();
 		$title = $revisionRecord->getPageAsLinkTarget();
-		
+
 		if ( !\PageEncryption::isEncryptedNamespace( $title ) ) {
 			return;
 		}
@@ -231,27 +228,27 @@ class PageEncryptionHooks {
 		$summary->data = [ 'encrypted' => true ];
 		// or ...
 		// $summary->text = 'edit encrypted content';
-				
+
 		$content = $revisionRecord->getContent( MediaWiki\Revision\SlotRecord::MAIN );
-	
-        // @TODO should be instance of text
+
+		// @TODO should be instance of text
 		$contentHandler = $content->getContentHandler();
 		$modelId = $contentHandler->getModelID();
-		
+
 		$text = $content->getText();
 
 		$encryptedText = \PageEncryption::encryptSymmetric( $text );
-		
+
 		if ( $encryptedText === false ) {
 			throw new MWException( "Cannot encrypt" );
 		}
-	
+
 		// $modelId = $slotRoleRegistry->getRoleHandler( $slotName )->getDefaultModel( $title );
 		$slotContent = ContentHandler::makeContent( $encryptedText, $title, $modelId );
-	
+
 		$slots = $revisionRecord->getSlots();
 		$slots->setContent( MediaWiki\Revision\SlotRecord::MAIN, $slotContent );
-    }
+	}
 
 	/**
 	 * *** ignore the cache if a page contains a transcluded page with stored permissions
@@ -263,23 +260,23 @@ class PageEncryptionHooks {
 	 */
 	public static function onRejectParserCacheValue( $parserOutput, $wikiPage, $parserOptions ) {
 		$title = $wikiPage->getTitle();
-		
+
 		if ( \PageEncryption::isEncryptedNamespace( $title ) ) {
 			return false;
 		}
 	}
-	
+
 	/**
 	 * Initialise the 'VisualEditorAvailableNamespaces' setting
 	 */
 	public static function onRegistration() {
 		$GLOBALS['wgVisualEditorAvailableNamespaces'][self::$encryptedNamespace] = true;
 	}
-	
+
 	public static function onUserLogoutComplete( &$user, &$inject_html, $old_name ) {
 		\PageEncryption::deleteCookie();
 	}
-	
+
 	/**
 	 * @param Title &$title
 	 * @param null $unused
@@ -316,11 +313,11 @@ class PageEncryptionHooks {
 		if ( \PageEncryption::$decryptionNotice === \PageEncryption::DecryptionFromAccessCode ) {
 			$siteNotice = '<div class="pageencryption-notice">' . wfMessage( 'pageencryption-sitenotice-decryption-from-access-code' )->plain() . '</div>';
 			return false;
-		}		
-			
+		}
+
 		return true;
 	}
-	
+
 	/**
 	 * @param Parser $parser
 	 * @param string &$text
@@ -333,20 +330,20 @@ class PageEncryptionHooks {
 			return;
 		}
 		$revisionRecord = $parser->getRevisionRecordObject();
-		
+
 		if ( !$revisionRecord ) {
 			return;
 		}
 
-		switch( \PageEncryption::$decryptionNotice ) {
-		
+		switch ( \PageEncryption::$decryptionNotice ) {
+
 			case \PageEncryption::EncryptedPage:
 				$text = '<div class="pageencryption-notice">' . wfMessage( 'pageencryption-sitenotice-encrypted-page' )->plain() . '</div>';
-			break;
-			
+				break;
+
 			case \PageEncryption::DecryptionFailed:
 				$text = '<div class="pageencryption-notice">' . wfMessage( 'pageencryption-sitenotice-decryption-failed' )->plain() . '</div>';
-			break;
+				break;
 
 		}
 	}
@@ -358,7 +355,7 @@ class PageEncryptionHooks {
 	 */
 	public static function onBeforePageDisplay( OutputPage $outputPage, Skin $skin ) {
 		global $wgResourceBasePath;
-		
+
 		$title = $outputPage->getTitle();
 
 		if ( !\PageEncryption::isEncryptedNamespace( $title ) ) {
@@ -374,7 +371,7 @@ class PageEncryptionHooks {
 		if ( $title->isKnown() ) {
 			\PageEncryption::addIndicator( $outputPage );
 		}
-		
+
 		$user = $skin->getUser();
 		if ( $user->isAllowed( 'pageencryption-cancreateencryption' ) ) {
 			\PageEncryption::addJsConfigVars( $outputPage, $title, $user );
@@ -398,7 +395,7 @@ class PageEncryptionHooks {
 		if ( !$title->isKnown() || $title->isSpecialPage() ) {
 			return;
 		}
-          
+
 		if ( !\PageEncryption::isEncryptedNamespace( $title ) ) {
 			return;
 		}
@@ -408,7 +405,7 @@ class PageEncryptionHooks {
 		}
 
 		$url = SpecialPage::getTitleFor( 'PageEncryptionPermissions', $title )->getLocalURL();
-		$links[ 'actions' ][] = [ 'text' => wfMessage( 'pageencryption-navigation' )->text(), 'href' => $url ];		
+		$links[ 'actions' ][] = [ 'text' => wfMessage( 'pageencryption-navigation' )->text(), 'href' => $url ];
 	}
 
 	/**
@@ -431,7 +428,5 @@ class PageEncryptionHooks {
 		if ( !$user || !$user->isRegistered() ) {
 			return;
 		}
-
 	}
 }
-

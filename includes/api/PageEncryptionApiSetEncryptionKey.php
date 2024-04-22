@@ -41,7 +41,7 @@ class PageEncryptionApiSetEncryptionKey extends ApiBase {
 	/**
 	 * @inheritDoc
 	 */
-	public function execute() {		
+	public function execute() {
 		$user = $this->getUser();
 
 		if ( !$user->isAllowed( 'pageencryption-cancreateencryption' ) ) {
@@ -53,9 +53,9 @@ class PageEncryptionApiSetEncryptionKey extends ApiBase {
 		$result = $this->getResult();
 
 		$params = $this->extractRequestParams();
-		
+
 		$row = \PageEncryption::getEncryptionKeyRecord( $user->getId() );
-		
+
 		if ( $row ) {
 			if ( !$params['reset-key'] ) {
 				$message = null;
@@ -76,7 +76,7 @@ class PageEncryptionApiSetEncryptionKey extends ApiBase {
 
 		$result->addValue( [ $this->getModuleName() ], 'action', 'new-record' );
 		$result->addValue( [ $this->getModuleName() ], 'message', $message );
-		
+
 		// return the resulting protected key, for backup purpose,
 		// since it is not password-deterministic
 		$result->addValue( [ $this->getModuleName() ], 'protected-key', $protected_key_encoded );

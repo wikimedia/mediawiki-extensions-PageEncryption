@@ -24,9 +24,6 @@
 
 require_once __DIR__ . '/PageEncryptionPermissionsPager.php';
 
-use MediaWiki\MediaWikiServices;
-use Wikimedia\IPUtils;
-
 /**
  * A special page that lists protected pages
  *
@@ -39,7 +36,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 
 	/** @var localTitle */
 	public $localTitle;
-	
+
 	/** @var isAuthorized */
 	public $isAuthorized;
 
@@ -50,7 +47,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 	private $request;
 
 	/** @var latest_id */
-	private $latest_id;	
+	private $latest_id;
 
 	/**
 	 * @inheritDoc
@@ -130,7 +127,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 
 		// $out->addWikiMsg( 'pageencryption-managepermissions-description-' . ( $this->title ? 'specific' : 'generic' ),
 		// 	!$this->title || !$user->isAllowed( 'pageencryption-canmanagepermissions' ) ? '' : $this->msg( 'pageencryption-managepermissions-description-manage-all-permissions' )->text() );
-		
+
 		$out->addWikiMsg( 'pageencryption-managepermissions-form-preamble' );
 
 		$out->addHTML( '<br />' );
@@ -215,7 +212,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 				$out->addHTML( '<br />' );
 				return;
 			}
-  
+
 			$row = [
 				'created_by' => null,
 				'page_id' => null,
@@ -351,7 +348,7 @@ $this->username = '';
 		$id = $request->getVal( 'edit' );
 
 		$new = ( $id && $id === 'new' );
-		
+
 		$row = [
 			'access_type' => $data['access_type'],
 			'expiration_date' => $data['expiration_date']
@@ -385,7 +382,7 @@ $this->username = '';
 	 */
 	protected function showOptions( $request ) {
 		$formDescriptor = [];
-		
+
 		if ( $this->isAuthorized ) {
 			$created_by = $request->getVal( 'created_by' );
 
@@ -428,4 +425,3 @@ $this->username = '';
 		return 'pageencryption';
 	}
 }
-

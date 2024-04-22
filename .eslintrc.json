@@ -9,6 +9,18 @@
 		"camelcase": "off",
 		"no-var": "off",
 		"no-jquery/no-global-selector": "warn",
-		"no-jquery/no-sizzle": "warn"
+		"no-jquery/no-sizzle": "warn",
+		"no-fallthrough": "warn",
+		"no-redeclare": "warn",
+		"no-undef": "warn",
+		"no-sequences": "warn",
+		"block-scoped-var": "warn",
+		"no-tabs": "warn",
+		"no-console": "warn",
+		"no-unused-vars": "warn",
+		"no-unreachable": "warn",
+		"no-unused-expressions": "warn",
+		"no-alert": "warn",
+		"compat/compat": "warn"
 	}
 }

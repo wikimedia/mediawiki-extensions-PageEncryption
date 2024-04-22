@@ -21,9 +21,8 @@
  * @author thomas-topway-it <support@topway.it>
  * @copyright Copyright ©2023, https://wikisphere.org
  */
- 
+
 use MediaWiki\Revision\RevisionStore;
-use MediaWiki\Page\PageIdentity;
 
 class PageEncryptionRevisionLookup extends RevisionStore {
 
@@ -43,4 +42,3 @@ class PageEncryptionRevisionLookup extends RevisionStore {
 	}
 
 }
-

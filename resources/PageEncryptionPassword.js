@@ -19,226 +19,226 @@
  * @copyright Copyright ©2023, https://wikisphere.org
  */
 
-$(function () {
+$( function () {
 	var WindowManager;
-	var DialogName = "Dialog";
-	var CookieName = "pageencryption-userkey";
+	var DialogName = 'Dialog';
+	var CookieName = 'pageencryption-userkey';
 	var Model = {};
 	var EncryptedNamespace = 2246;
 	var PasswordInputField;
 	var PasswordConfirmationInputField;
 	var MessageWidget;
-	var KeyRecordIsSet = mw.config.get("pageencryption-protected-key-isSet");
-	var UserkeyCookieIsSet = mw.config.get("pageencryption-userkey-cookie-isSet");
+	var KeyRecordIsSet = mw.config.get( 'pageencryption-protected-key-isSet' );
+	var UserkeyCookieIsSet = mw.config.get( 'pageencryption-userkey-cookie-isSet' );
 	var Booklet;
 
 	// console.log(mw.config);
 
-	function ProcessDialog(config) {
-		ProcessDialog.super.call(this, config);
+	function ProcessDialog( config ) {
+		ProcessDialog.super.call( this, config );
 	}
-	OO.inheritClass(ProcessDialog, OO.ui.ProcessDialog);
+	OO.inheritClass( ProcessDialog, OO.ui.ProcessDialog );
 
 	ProcessDialog.static.name = DialogName;
-	ProcessDialog.static.title = "PageEncryption";
+	ProcessDialog.static.title = 'PageEncryption';
 
 	ProcessDialog.static.actions = [
 		{
-			action: "save",
-			modes: "edit",
-			label: mw.msg("pageencryption-jsmodule-dialog-save"),
-			flags: ["primary", "progressive"],
+			action: 'save',
+			modes: 'edit',
+			label: mw.msg( 'pageencryption-jsmodule-dialog-save' ),
+			flags: [ 'primary', 'progressive' ]
 		},
 		{
-			modes: "edit",
-			label: mw.msg("pageencryption-jsmodule-dialog-cancel"),
-			flags: ["safe", "close"],
-		},
+			modes: 'edit',
+			label: mw.msg( 'pageencryption-jsmodule-dialog-cancel' ),
+			flags: [ 'safe', 'close' ]
+		}
 	];
 
-	function PageOneLayout(name, config) {
-		PageOneLayout.super.call(this, name, config);
+	function PageOneLayout( name, config ) {
+		PageOneLayout.super.call( this, name, config );
 
-		var fieldset = new OO.ui.FieldsetLayout({
-			label: "",
-		});
+		var fieldset = new OO.ui.FieldsetLayout( {
+			label: ''
+		} );
 
-		var passwordInput = new OO.ui.TextInputWidget({
-			label: mw.msg("pageencryption-jsmodule-dialog-password"),
-			value: "",
+		var passwordInput = new OO.ui.TextInputWidget( {
+			label: mw.msg( 'pageencryption-jsmodule-dialog-password' ),
+			value: '',
 			required: true,
-			type: "password",
-		});
+			type: 'password'
+		} );
 
-		PasswordInputField = new OO.ui.FieldLayout(passwordInput, {
-			label: "",
-			align: "top",
-		});
+		PasswordInputField = new OO.ui.FieldLayout( passwordInput, {
+			label: '',
+			align: 'top'
+		} );
 
 		Model.passwordInput = passwordInput;
 
-		var passwordConfirmationInput = new OO.ui.TextInputWidget({
-			label: mw.msg("pageencryption-jsmodule-dialog-password-confirmation"),
-			value: "",
+		var passwordConfirmationInput = new OO.ui.TextInputWidget( {
+			label: mw.msg( 'pageencryption-jsmodule-dialog-password-confirmation' ),
+			value: '',
 			required: true,
-			type: "password",
-		});
+			type: 'password'
+		} );
 
 		Model.passwordConfirmationInput = passwordConfirmationInput;
 
-		(PasswordConfirmationInputField = new OO.ui.FieldLayout(
+		( PasswordConfirmationInputField = new OO.ui.FieldLayout(
 			passwordConfirmationInput,
 			{
-				label: "",
-				align: "top",
+				label: '',
+				align: 'top'
 			}
-		)),
-			(MessageWidget = new OO.ui.MessageWidget({
-				type: "info",
-				// inline: true,
-				label: mw.msg("pageencryption-jsmodule-dialog-field-password"),
-			}));
+		) ),
+		( MessageWidget = new OO.ui.MessageWidget( {
+			type: 'info',
+			// inline: true,
+			label: mw.msg( 'pageencryption-jsmodule-dialog-field-password' )
+		} ) );
 
 		// MessageWidget.toggle(false)
-		fieldset.addItems([
+		fieldset.addItems( [
 			MessageWidget,
 
 			PasswordInputField,
-			PasswordConfirmationInputField,
-		]);
+			PasswordConfirmationInputField
+		] );
 
-		this.$element.append(fieldset.$element);
+		this.$element.append( fieldset.$element );
 	}
-	OO.inheritClass(PageOneLayout, OO.ui.PageLayout);
+	OO.inheritClass( PageOneLayout, OO.ui.PageLayout );
 	PageOneLayout.prototype.setupOutlineItem = function () {
-		this.outlineItem.setLabel("Page One");
+		this.outlineItem.setLabel( 'Page One' );
 	};
 
 	function messageButton() {
-		var buttonGoBack = new OO.ui.ButtonWidget({
+		var buttonGoBack = new OO.ui.ButtonWidget( {
 			framed: false,
-			label: mw.msg("pageencryption-jsmodule-dialog-goback"),
-			classes: ["pageencryption-button-goback"],
-		});
+			label: mw.msg( 'pageencryption-jsmodule-dialog-goback' ),
+			classes: [ 'pageencryption-button-goback' ]
+		} );
 
-		buttonGoBack.on("click", function () {
-			Booklet.setPage("two");
+		buttonGoBack.on( 'click', function () {
+			Booklet.setPage( 'two' );
 
 			// MessageWidget resides on page one
-			MessageWidget.setType("info");
+			MessageWidget.setType( 'info' );
 			MessageWidget.setLabel(
-				mw.msg("pageencryption-jsmodule-dialog-field-password")
+				mw.msg( 'pageencryption-jsmodule-dialog-field-password' )
 			);
-		});
+		} );
 
 		return new OO.ui.HtmlSnippet(
-			$("<span>").append(
-				mw.msg("pageencryption-jsmodule-dialog-field-password-reset") + " ",
+			$( '<span>' ).append(
+				mw.msg( 'pageencryption-jsmodule-dialog-field-password-reset' ) + ' ',
 				buttonGoBack.$element
 			)
 		);
 	}
 
-	function PageTwoLayout(name, config) {
-		PageTwoLayout.super.call(this, name, config);
+	function PageTwoLayout( name, config ) {
+		PageTwoLayout.super.call( this, name, config );
 
-		var fieldset = new OO.ui.FieldsetLayout({
-			label: "",
-		});
+		var fieldset = new OO.ui.FieldsetLayout( {
+			label: ''
+		} );
 
-		var enterPasswordInput = new OO.ui.TextInputWidget({
-			label: mw.msg("pageencryption-jsmodule-dialog-password"),
-			value: "",
+		var enterPasswordInput = new OO.ui.TextInputWidget( {
+			label: mw.msg( 'pageencryption-jsmodule-dialog-password' ),
+			value: '',
 			required: true,
-			type: "password",
-		});
+			type: 'password'
+		} );
 
-		var buttonLostPassword = new OO.ui.ButtonWidget({
+		var buttonLostPassword = new OO.ui.ButtonWidget( {
 			framed: false,
-			label: mw.msg("pageencryption-jsmodule-lost-password"),
-			classes: ["pageencryption-button-lost-password"],
-		});
+			label: mw.msg( 'pageencryption-jsmodule-lost-password' ),
+			classes: [ 'pageencryption-button-lost-password' ]
+		} );
 
-		buttonLostPassword.on("click", function () {
-			Booklet.setPage("one");
-			MessageWidget.setType("error");
-			MessageWidget.setLabel(messageButton());
-		});
+		buttonLostPassword.on( 'click', function () {
+			Booklet.setPage( 'one' );
+			MessageWidget.setType( 'error' );
+			MessageWidget.setLabel( messageButton() );
+		} );
 
-		var enterPasswordInputField = new OO.ui.FieldLayout(enterPasswordInput, {
-			label: "",
-			align: "top",
+		var enterPasswordInputField = new OO.ui.FieldLayout( enterPasswordInput, {
+			label: '',
+			align: 'top',
 			helpInline: true,
-			classes: ["pageencryption-field-password"],
-			help: new OO.ui.HtmlSnippet(buttonLostPassword.$element),
-		});
+			classes: [ 'pageencryption-field-password' ],
+			help: new OO.ui.HtmlSnippet( buttonLostPassword.$element )
+		} );
 
 		Model.enterPasswordInput = enterPasswordInput;
 
-		var messageWidget = new OO.ui.MessageWidget({
-			type: "info",
-			label: mw.msg("pageencryption-jsmodule-dialog-field-password-reenter"),
-		});
+		var messageWidget = new OO.ui.MessageWidget( {
+			type: 'info',
+			label: mw.msg( 'pageencryption-jsmodule-dialog-field-password-reenter' )
+		} );
 
 		// MessageWidget.toggle(false)
-		fieldset.addItems([messageWidget, enterPasswordInputField]);
+		fieldset.addItems( [ messageWidget, enterPasswordInputField ] );
 
-		this.$element.append(fieldset.$element);
+		this.$element.append( fieldset.$element );
 	}
-	OO.inheritClass(PageTwoLayout, OO.ui.PageLayout);
+	OO.inheritClass( PageTwoLayout, OO.ui.PageLayout );
 	PageTwoLayout.prototype.setupOutlineItem = function () {
-		this.outlineItem.setLabel("Page Two");
+		this.outlineItem.setLabel( 'Page Two' );
 	};
 
 	ProcessDialog.prototype.initialize = function () {
-		ProcessDialog.super.prototype.initialize.apply(this, arguments);
+		ProcessDialog.super.prototype.initialize.apply( this, arguments );
 
-		var page1 = new PageOneLayout("one"),
-			page2 = new PageTwoLayout("two");
+		var page1 = new PageOneLayout( 'one' ),
+			page2 = new PageTwoLayout( 'two' );
 
-		Booklet = new OO.ui.BookletLayout({
+		Booklet = new OO.ui.BookletLayout( {
 			outlined: false,
 			expanded: true,
-			showMenu: false,
-		});
+			showMenu: false
+		} );
 
-		Booklet.addPages([page1, page2]);
+		Booklet.addPages( [ page1, page2 ] );
 
-		Booklet.setPage(!KeyRecordIsSet ? "one" : "two");
+		Booklet.setPage( !KeyRecordIsSet ? 'one' : 'two' );
 
-		var content = new OO.ui.PanelLayout({
+		var content = new OO.ui.PanelLayout( {
 			$content: Booklet.$element,
 			padded: true,
-			expanded: true,
-		});
+			expanded: true
+		} );
 
-		this.$body.append(content.$element);
+		this.$body.append( content.$element );
 	};
 
 	ProcessDialog.prototype.getBodyHeight = function () {
 		return 300;
 	};
 
-	ProcessDialog.prototype.getActionProcess = function (action) {
+	ProcessDialog.prototype.getActionProcess = function ( action ) {
 		var dialog = this;
 
-		if (!action || action === "delete") {
-			return ProcessDialog.super.prototype.getActionProcess.call(this, action);
+		if ( !action || action === 'delete' ) {
+			return ProcessDialog.super.prototype.getActionProcess.call( this, action );
 		}
 
 		// or use Booklet.getCurrentPage().name
-		if (!KeyRecordIsSet) {
+		if ( !KeyRecordIsSet ) {
 			var password = Model.passwordInput.getValue();
 			var passwordConfirm = Model.passwordConfirmationInput.getValue();
 
-			if (password !== passwordConfirm) {
-				console.log(password + "," + passwordConfirm);
+			if ( password !== passwordConfirm ) {
+				console.log( password + ',' + passwordConfirm );
 
-				PasswordInputField.setErrors([]);
+				PasswordInputField.setErrors( [] );
 
-				PasswordConfirmationInputField.setErrors([
-					mw.msg("pageencryption-jsmodule-dialog-password-error-nomatch"),
-				]);
+				PasswordConfirmationInputField.setErrors( [
+					mw.msg( 'pageencryption-jsmodule-dialog-password-error-nomatch' )
+				] );
 
 				return ProcessDialog.super.prototype.getActionProcess.call(
 					this,
@@ -247,117 +247,117 @@ $(function () {
 			}
 
 			var validator = new PageEncryptionPasswordValidator();
-			var errors = validator.checkPassword(password);
+			var errors = validator.checkPassword( password );
 			var conf = validator.getConf();
 
-			if (errors.length) {
+			if ( errors.length ) {
 				var errorsMessages = [];
 
-				for (var error of errors) {
-					var args = ["pageencryption-jsmodule-dialog-password-error-" + error];
-					switch (error) {
-						case "length":
-							args.push(conf.minSize);
-							args.push(conf.maxSize);
+				for ( var error of errors ) {
+					var args = [ 'pageencryption-jsmodule-dialog-password-error-' + error ];
+					switch ( error ) {
+						case 'length':
+							args.push( conf.minSize );
+							args.push( conf.maxSize );
 							break;
 
 							break;
-						case "special":
-							args.push(conf.specialCharacters);
+						case 'special':
+							args.push( conf.specialCharacters );
 
 							break;
-						case "prohibited":
-							args.push(conf.prohibitedCharacters);
+						case 'prohibited':
+							args.push( conf.prohibitedCharacters );
 							break;
 					}
 
-					errorsMessages.push(mw.msg.apply(null, args));
+					errorsMessages.push( mw.msg.apply( null, args ) );
 				}
-				PasswordInputField.setErrors(errorsMessages);
+				PasswordInputField.setErrors( errorsMessages );
 				return ProcessDialog.super.prototype.getActionProcess.call(
 					this,
 					action
 				);
 			}
 
-			PasswordInputField.setErrors([]);
-			PasswordConfirmationInputField.setErrors([]);
+			PasswordInputField.setErrors( [] );
+			PasswordConfirmationInputField.setErrors( [] );
 		} else {
 			var password = Model.enterPasswordInput.getValue();
 		}
 
 		var payload = {
-			action: "pageencryption-set-encryption-key",
+			action: 'pageencryption-set-encryption-key',
 			password: password,
-			"reset-key": Booklet.getCurrentPage().name === "one" ? 1 : 0,
+			'reset-key': Booklet.getCurrentPage().name === 'one' ? 1 : 0
 		};
 
 		// https://www.mediawiki.org/wiki/OOUI/Windows/Process_Dialogs#Action_sets
 		return ProcessDialog.super.prototype.getActionProcess
-			.call(this, action)
-			.first(function () {
-				switch (action) {
-					case "save":
+			.call( this, action )
+			.first( function () {
+				switch ( action ) {
+					case 'save':
 
 					// eslint-disable no-fallthrough
-					case "delete":
-						var callApi = function (postData, resolve, reject) {
+					case 'delete':
+						var callApi = function ( postData, resolve, reject ) {
 							// console.log("postData", postData);
 
 							new mw.Api()
-								.postWithToken("csrf", postData)
-								.done(function (res) {
+								.postWithToken( 'csrf', postData )
+								.done( function ( res ) {
 									// console.log("res", res);
-									if (!("pageencryption-set-encryption-key" in res)) {
+									if ( !( 'pageencryption-set-encryption-key' in res ) ) {
 										reject(
-											new OO.ui.Error(res, {
+											new OO.ui.Error( res, {
 												recoverable: true,
-												warning: false,
-											})
+												warning: false
+											} )
 										);
 									} else {
-										var value = res["pageencryption-set-encryption-key"];
-										if (value["message"] !== null) {
+										var value = res[ 'pageencryption-set-encryption-key' ];
+										if ( value.message !== null ) {
 											reject(
-												new OO.ui.Error(value["message"], {
+												new OO.ui.Error( value.message, {
 													recoverable: true,
-													warning: false,
-												})
+													warning: false
+												} )
 											);
 										} else {
-											if (value["action"] === "new-record") {
+											if ( value.action === 'new-record' ) {
 												// @TODO show popup
-												console.log(value["protected-key"]);
+												console.log( value[ 'protected-key' ] );
 											}
 
-											WindowManager.removeWindows([DialogName]);
+											WindowManager.removeWindows( [ DialogName ] );
 										}
 									}
 
 									// resolve();
-								})
-								.fail(function (res) {
-									console.log("res", res);
+								} )
+								.fail( function ( res ) {
+									console.log( 'res', res );
 									var msg = res;
 									// https://doc.wikimedia.org/oojs-ui/master/js/source/Error.html#OO-ui-Error-method-constructor
 									reject(
-										new OO.ui.Error(msg, { recoverable: true, warning: false })
+										new OO.ui.Error( msg, { recoverable: true, warning: false } )
 									);
-								});
+								} );
 						};
-						// eslint-disable-next-line compat/compat
-						return new Promise((resolve, reject) => {
-							mw.loader.using("mediawiki.api", function () {
-								callApi(payload, resolve, reject);
-							});
-						}); // promise
-				}
-				//return false;
-			}, this); // .next
 
-		return new OO.ui.Process(function () {
-			dialog.close({ action: action });
-		});
+						return new Promise( ( resolve, reject ) => {
+							mw.loader.using( 'mediawiki.api', function () {
+								callApi( payload, resolve, reject );
+							} );
+						} ); // promise
+				}
+				// return false;
+			}, this ); // .next
+
+		return new OO.ui.Process( function () {
+			dialog.close( { action: action } );
+		} );
 
 		// return ProcessDialog.super.prototype.getActionProcess.call( this, action );
 	};
@@ -385,25 +385,25 @@ $(function () {
 	// };
 
 	function createWindowManager() {
-		var windowManager = new OO.ui.WindowManager({
-			classes: ["pageencryption-ooui-window"],
-		});
-		$(document.body).append(windowManager.$element);
+		var windowManager = new OO.ui.WindowManager( {
+			classes: [ 'pageencryption-ooui-window' ]
+		} );
+		$( document.body ).append( windowManager.$element );
 
 		return windowManager;
 	}
 
 	function openDialog() {
-		var processDialog = new ProcessDialog({
-			size: "medium",
-			classes: [],
-		});
+		var processDialog = new ProcessDialog( {
+			size: 'medium',
+			classes: []
+		} );
 
 		WindowManager = createWindowManager();
 
-		WindowManager.addWindows([processDialog]);
+		WindowManager.addWindows( [ processDialog ] );
 
-		WindowManager.openWindow(processDialog);
+		WindowManager.openWindow( processDialog );
 	}
 
 	//  *** httpOnly cookies cannot be accessed client-side
@@ -412,13 +412,13 @@ $(function () {
 	// }
 
 	function isEncryptedNamespace() {
-		return mw.config.get("wgNamespaceNumber") === EncryptedNamespace;
+		return mw.config.get( 'wgNamespaceNumber' ) === EncryptedNamespace;
 	}
 
 	if (
-		mw.config.get("pageencryption-user-is-editor") &&
-		(!KeyRecordIsSet || !UserkeyCookieIsSet)
+		mw.config.get( 'pageencryption-user-is-editor' ) &&
+		( !KeyRecordIsSet || !UserkeyCookieIsSet )
 	) {
 		openDialog();
 	}
-});
+} );

@@ -21,38 +21,39 @@
  * @copyright Copyright ©2023, https://wikisphere.org
  */
 use Defuse\Crypto\Crypto;
-use Defuse\Crypto\KeyProtectedByPassword;
 use Defuse\Crypto\Key;
+use Defuse\Crypto\KeyProtectedByPassword;
 use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Revision\RevisionStore;
 use MediaWiki\Revision\MutableRevisionRecord;
+use MediaWiki\Revision\RevisionStore;
 use MediaWiki\Revision\RevisionStoreRecord;
-use MediaWiki\Session\SessionManager;
+
 class PageEncryption {
 	/** @var User */
 	public static $User;
 	/** @var userGroupManager */
 	public static $userGroupManager;
-	
+
 	/** @var encryptedNamespace */
 	public static $encryptedNamespace = 2246;
-	
+
 	/** @var cookieUserKey */
 	public static $cookieUserKey = 'pageencryption-userkey';
-	
+
 	/** @var cachedMockUpRev */
 	public static $cachedMockUpRev = [];
 	/** @const DecryptionFailed */
 	public const DecryptionFailed = 1;
-	
+
 	/** @const DecryptionFromAccessCode */
 	public const DecryptionFromAccessCode = 2;
 	/** @const EncryptedPage */
 	public const EncryptedPage = 3;
-	
+
 	/** @var decryptionNotice */
 	public static $decryptionNotice = null;
+
 	/**
 	 * @param User|null $user
 	 */
@@ -60,6 +61,7 @@ class PageEncryption {
 		self::$User = $user;
 		self::$userGroupManager = MediaWikiServices::getInstance()->getUserGroupManager();
 	}
+
 	/**
 	 * @return User|null
 	 */
@@ -69,6 +71,7 @@ class PageEncryption {
 		}
 		return RequestContext::getMain()->getUser();
 	}
+
 	/**
 	 * param string $password
 	 * @return string
@@ -77,20 +80,21 @@ class PageEncryption {
 		// @see https://github.com/defuse/php-encryption/blob/master/docs/Tutorial.md
 		$protected_key = KeyProtectedByPassword::createRandomPasswordProtectedKey( $password );
 		$protected_key_encoded = $protected_key->saveToAsciiSafeString();
-   		$protected_key = KeyProtectedByPassword::loadFromAsciiSafeString( $protected_key_encoded );
-   		
-   		// @todo save to database
-   		
-   		return $protected_key;
+		$protected_key = KeyProtectedByPassword::loadFromAsciiSafeString( $protected_key_encoded );
+
+		// @todo save to database
+
+		return $protected_key;
 	}
+
 	/**
 	 * @return array
 	 */
 	public static function getCookieOptions() {
 		$context = RequestContext::getMain();
 		$config = $context->getConfig();
-		
-		list(
+
+		[
 			$cookieSameSite,
 			$cookiePrefix,
 			$cookiePath,
@@ -98,7 +102,7 @@ class PageEncryption {
 			$cookieSecure,
 			$forceHTTPS,
 			$cookieHttpOnly,
-		) = ( class_exists( 'MediaWiki\MainConfigNames' ) ?
+		] = ( class_exists( 'MediaWiki\MainConfigNames' ) ?
 			[
 				MainConfigNames::CookieSameSite,
 				MainConfigNames::CookiePrefix,
@@ -107,7 +111,7 @@ class PageEncryption {
 				MainConfigNames::CookieSecure,
 				MainConfigNames::ForceHTTPS,
 				MainConfigNames::CookieHttpOnly
-			] : 
+			] :
 			[
 				'CookieSameSite',
 				'CookiePrefix',
@@ -117,8 +121,8 @@ class PageEncryption {
 				'ForceHTTPS',
 				'CookieHttpOnly'
 			]
-		); 
-		
+		);
+
 		// @codeCoverageIgnoreStart
 		return [
 			'prefix' => $config->get( $cookiePrefix ),
@@ -128,52 +132,53 @@ class PageEncryption {
 				|| $config->get( $forceHTTPS ),
 			'httpOnly' => $config->get( $cookieHttpOnly ),
 			'sameSite' => $config->get( $cookieSameSite )
-		];	
-	}	
+		];
+	}
+
 	/**
 	 * @param string $cookieValue
-	 * @return 
+	 * @return
 	 */
 	public static function setCookie( $cookieValue ) {
-	    // setcookie( 'pageencryption-passwordkey', $protected_key_encoded, array $options = []): bool
-    	$context = RequestContext::getMain();
-    	$request = $context->getRequest();
+		// setcookie( 'pageencryption-passwordkey', $protected_key_encoded, array $options = []): bool
+		$context = RequestContext::getMain();
+		$request = $context->getRequest();
 		$response = $request->response();
-		// $session = SessionManager::getGlobalSession();		
+		// $session = SessionManager::getGlobalSession();
 		// $expiration = $session->getProvider()->getRememberUserDuration();
 		$cookieOptions = self::getCookieOptions();
-		
+
 		$session = $request->getSession();
-		
+
 		$sessionProvider = $session->getProvider();
 		// !( $session->getProvider() instanceof CookieSessionProvider )
 		// $info = $sessionProvider->provideSessionInfo( $request );
 		// $provider = $info->getProvider();
-		
+
 		// @TODO subtract (current time - login time)
 		$expiryValue = $sessionProvider->getRememberUserDuration() + time();
 		return $response->setCookie( self::$cookieUserKey, $cookieValue, $expiryValue, $cookieOptions );
 	}
-	
+
 	/**
-	 * @return 
+	 * @return
 	 */
 	public static function deleteCookie() {
 		$context = RequestContext::getMain();
-    	$request = $context->getRequest();
+		$request = $context->getRequest();
 		$response = $request->response();
-		
+
 		// @see CookieSessionProvider unpersistSession
 		$cookies = [
 			self::$cookieUserKey => false,
 		];
 		$cookieOptions = self::getCookieOptions();
-		
+
 		foreach ( $cookies as $key => $value ) {
 			$response->clearCookie( $key, $cookieOptions );
 		}
 	}
-	
+
 	/**
 	 * @param int $pageId
 	 * @param Key $user_key
@@ -203,19 +208,20 @@ class PageEncryption {
 			try {
 				$text = Crypto::decrypt( $text, $user_key );
 			} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
-  				continue;
+				continue;
 			}
-	
+
 			return $text;
 		}
 		return false;
 	}
+
 	/**
 	 * @param int $pageId
 	 * @param string $password
 	 * @return string|bool
 	 */
-	public static function decryptFromAccessCode( $pageId, $password ) {		
+	public static function decryptFromAccessCode( $pageId, $password ) {
 		$dbr = wfGetDB( DB_MASTER );
 		$rows = $dbr->select( 'pageencryption_permissions', '*', [ 'page_id' => $pageId, 'viewed' => null ] );
 		foreach ( $rows as $row ) {
@@ -223,28 +229,28 @@ class PageEncryption {
 			try {
 				$user_key = $protected_key->unlockKey( $password );
 			} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
-			   continue;
+				continue;
 			}
 			$user_key_encoded = $user_key->saveToAsciiSafeString();
 			$context = RequestContext::getMain();
-    		$request = $context->getRequest();
-			$response = $request->response();	
+			$request = $context->getRequest();
+			$response = $request->response();
 			$cookieOptions = self::getCookieOptions();
 			$cookieValue = $user_key_encoded;
 			$expiryValue = 0;
 			$cookieOptions = self::getCookieOptions();
 			$cookieKey = self::$cookieUserKey . '-acode-' . $pageId;
 			$response->setCookie( $cookieKey, $cookieValue, $expiryValue, $cookieOptions );
-		
+
 			// $ret = Key::loadFromAsciiSafeString( $user_key_encoded );
 			$text = $row->encrypted_content;
 			try {
 				$text = Crypto::decrypt( $text, $user_key );
 			} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
-  				continue;
+				continue;
 			}
 			$date = date( 'Y-m-d H:i:s' );
-			
+
 			// allow no-track
 			$viewed_metadata = ( empty( $_GET['no_track'] ) ? json_encode( [
 				'ip' => self::getIPAddress(),
@@ -259,10 +265,10 @@ class PageEncryption {
 		}
 		return false;
 	}
-	
+
 	/**
 	 * @param
-	 * @return 
+	 * @return
 	 */
 	public static function mockUpRevision( $rev ) {
 		// *** prevents error "Sessions are disabled for load entry point"
@@ -282,7 +288,7 @@ class PageEncryption {
 		if ( array_key_exists( $cacheKey, self::$cachedMockUpRev ) ) {
 			return self::$cachedMockUpRev[$cacheKey];
 		}
-		
+
 		$content = $rev->getSlot( MediaWiki\Revision\SlotRecord::MAIN )->getContent();
 
 		if ( !( $content instanceof TextContent ) ) {
@@ -300,7 +306,7 @@ class PageEncryption {
 				try {
 					$user_key = Key::loadFromAsciiSafeString( $user_key_encoded );
 				} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
-    			}
+				}
 				$text = self::decryptFromAccessCodeSession( $pageId, $user_key );
 			} elseif ( !empty( $_GET['acode'] ) ) {
 				$text = self::decryptFromAccessCode( $pageId, $_GET['acode'] );
@@ -327,12 +333,12 @@ class PageEncryption {
 		// should be instance of text
 		$contentHandler = $content->getContentHandler();
 		$modelId = $contentHandler->getModelID();
-	
+
 		$slotContent = ContentHandler::makeContent( $text, $title, $modelId );
 		$revisionRecord = MutableRevisionRecord::newFromParentRevision( $rev );
 		$slots = $revisionRecord->getSlots();
 		$slots->setContent( MediaWiki\Revision\SlotRecord::MAIN, $slotContent );
-       
+
 		$user = $rev->getUser();
 		$comment = $rev->getComment();
 		$row = [
@@ -346,24 +352,26 @@ class PageEncryption {
 			'rev_sha1' => $rev->getSha1(),
 			'page_latest' => $rev->getId(),
 		];
-		return self::$cachedMockUpRev[$cacheKey] = new RevisionStoreRecord( $title, $user, $comment, (object)$row, $slots );		
+		return self::$cachedMockUpRev[$cacheKey] = new RevisionStoreRecord( $title, $user, $comment, (object)$row, $slots );
 	}
+
 	/**
 	 * @return string
 	 */
 	public static function getUserKey() {
-	   	$context = RequestContext::getMain();
-    	$request = $context->getRequest();
+		$context = RequestContext::getMain();
+		$request = $context->getRequest();
 		if ( !$user_key_encoded = $request->getCookie( self::$cookieUserKey ) ) {
 			return false;
 		}
 		try {
 			$ret = Key::loadFromAsciiSafeString( $user_key_encoded );
 		} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
-    
+
 		}
 		return $ret;
 	}
+
 	/**
 	 * @return false|string
 	 */
@@ -374,10 +382,11 @@ class PageEncryption {
 		try {
 			$text = Crypto::decrypt( $text, $user_key );
 		} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
-    		return false;
+			return false;
 		}
 		return $text;
 	}
+
 	/**
 	 * @param string $text
 	 * @param string|null $user_key
@@ -387,14 +396,14 @@ class PageEncryption {
 		if ( !$user_key && !$user_key = self::getUserKey() ) {
 			return false;
 		}
-		try {			
+		try {
 			$text = Crypto::encrypt( $text, $user_key );
 		} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
-    		return false;
+			return false;
 		}
 		return $text;
 	}
-	
+
 	/**
 	 * @return MediaWiki\User\UserGroupManager|null
 	 */
@@ -404,6 +413,7 @@ class PageEncryption {
 		}
 		return MediaWikiServices::getInstance()->getUserGroupManager();
 	}
+
 	/**
 	 * @param User $user
 	 * @param Title $title
@@ -423,38 +433,38 @@ class PageEncryption {
 			}
 			$row['created_by'] = $user->getId();
 			$row['page_id'] = $title->getArticleId();
-			$wikiPage = \PageEncryption::getWikiPage( $title );
+			$wikiPage = self::getWikiPage( $title );
 			$revisionRecord = $wikiPage->getRevisionRecord();
 			$row['revision_id'] = $revisionRecord->getId();
 			do {
 				$password = self::random_str( 5 );
 				$row['encrypted_password'] = self::encryptSymmetric( $password );
-			
+
 				$row_ = $dbr->selectRow(
 					'pageencryption_permissions',
 					'*',
 					[ 'page_id' => $row['page_id'], 'encrypted_password' => $row['encrypted_password'] ],
 					__METHOD__
 				);
-			} while( $row_ !== false );
+			} while ( $row_ !== false );
 			$contentHandler = $revisionRecord->getSlot( MediaWiki\Revision\SlotRecord::MAIN )->getContent()->getContentHandler();
 			$modelId = $contentHandler->getModelID();
-        
+
 			$content = $revisionRecord->getSlot( MediaWiki\Revision\SlotRecord::MAIN )->getContent();
-          
+
 			// should be instance of text
 			$contentHandler = $content->getContentHandler();
-			
+
 			$text = $content->getText();
 			$protected_key = KeyProtectedByPassword::createRandomPasswordProtectedKey( $password );
 			$protected_key_encoded = $protected_key->saveToAsciiSafeString();
 			$user_key = $protected_key->unlockKey( $password );
 			$text = self::encryptSymmetric( $text, $user_key );
-	
+
 			$row['protected_key'] = $protected_key_encoded;
 			$row['encrypted_content'] = $text;
 			$row['expiration_date'] = null;
-			
+
 			$res = $dbr->insert( 'pageencryption_permissions', $row + [ 'updated_at' => $date, 'created_at' => $date ] );
 		} else {
 			unset( $row['access_type'] );
@@ -462,6 +472,7 @@ class PageEncryption {
 		}
 		return $res;
 	}
+
 	/**
 	 * @param string $protected_key
 	 * @param string $password
@@ -470,7 +481,7 @@ class PageEncryption {
 	 */
 	public static function setUserKey( $protected_key, $password, &$message ) {
 		$protected_key = KeyProtectedByPassword::loadFromAsciiSafeString( $protected_key );
-		
+
 		// @see https://github.com/defuse/php-encryption/blob/master/docs/classes/Crypto.md
 		try {
 			$user_key = $protected_key->unlockKey( $password );
@@ -483,22 +494,23 @@ class PageEncryption {
 		if ( $res === false ) {
 			$message = wfMessage( 'pageencryption-error-message-cannot-set-cookie' )->text();
 		}
-			
+
 		return $res;
 	}
-	
+
 	/**
 	 * @param array $row
 	 * @return bool
 	 */
 	public static function disableEncryptionKeyRecord( $row ) {
 		return $dbr->update(
-    		'pageencryption_keys',
-    		[ 'enabled' => 0 ],
-    		[ 'id' => $row['id'] ],
-    		__METHOD__
-    	);
+			'pageencryption_keys',
+			[ 'enabled' => 0 ],
+			[ 'id' => $row['id'] ],
+			__METHOD__
+		);
 	}
+
 	/**
 	 * @param string $user_id
 	 * @param string $password
@@ -509,22 +521,22 @@ class PageEncryption {
 	public static function setEncryptionKey( $user_id, $password, &$message, &$protected_key_encoded ) {
 		$protected_key = KeyProtectedByPassword::createRandomPasswordProtectedKey( $password );
 		$protected_key_encoded = $protected_key->saveToAsciiSafeString();
-    
+
 		$row = [
 			'user_id' => $user_id,
 			'protected_key' => $protected_key_encoded,
 		];
-		
+
 		$date = date( 'Y-m-d H:i:s' );
-		
+
 		$dbr = wfGetDB( DB_MASTER );
 		$res = $dbr->insert( 'pageencryption_keys', $row + [ 'updated_at' => $date, 'created_at' => $date ] );
-		
+
 		if ( !$res ) {
 			$message = wfMessage( 'pageencryption-error-message-cannot-save-encryptionkey' )->text();
 			return false;
 		}
-			
+
 		$protected_key = KeyProtectedByPassword::loadFromAsciiSafeString( $protected_key_encoded );
 		$user_key = $protected_key->unlockKey( $password );
 		$user_key_encoded = $user_key->saveToAsciiSafeString();
@@ -534,14 +546,15 @@ class PageEncryption {
 		}
 		return $res;
 	}
+
 	/**
 	 * @param Title $title
 	 * @return bool
 	 */
 	public static function isEncryptedNamespace( $title ) {
-		return $title->getNamespace() === self::$encryptedNamespace;		
+		return $title->getNamespace() === self::$encryptedNamespace;
 	}
-	
+
 	/**
 	 * @see OutputPage addHelpLink
 	 * @param OutputPage $outputPage
@@ -549,7 +562,7 @@ class PageEncryption {
 	public static function addIndicator( $outputPage ) {
 		$to = 'Extension:PageEncryption';
 		$toUrlencoded = wfUrlencode( str_replace( ' ', '_', $to ) );
-		$helpUrl = "https://www.mediawiki.org/wiki/Special:MyLanguage/$toUrlencoded"; 
+		$helpUrl = "https://www.mediawiki.org/wiki/Special:MyLanguage/$toUrlencoded";
 		$text = '';
 		$link = Html::rawElement(
 			'a',
@@ -560,11 +573,12 @@ class PageEncryption {
 			],
 			$text
 		);
-		
+
 		$outputPage->setIndicators( [
 			'pageencryption' => $link
 		] );
 	}
+
 	/**
 	 * @param OutputPage $outputPage
 	 * @param Title $title
@@ -583,10 +597,11 @@ class PageEncryption {
 			// httpOnly cookies cannot be accessed client-side, so we
 			// set a specific variable
 			'pageencryption-user-is-editor' => true,
-			'pageencryption-userkey-cookie-isSet' => \PageEncryption::getUserKey() !== false,
-			'pageencryption-protected-key-isSet' => is_array( \PageEncryption::getEncryptionKeyRecord( $user->getId() ) ),
+			'pageencryption-userkey-cookie-isSet' => self::getUserKey() !== false,
+			'pageencryption-protected-key-isSet' => is_array( self::getEncryptionKeyRecord( $user->getId() ) ),
 		] );
 	}
+
 	/**
 	 * @param array $conds
 	 * @return void
@@ -601,7 +616,7 @@ class PageEncryption {
 		);
 		return $row ? (array)$row : null;
 	}
-	
+
 	/**
 	 * @param array $conds
 	 * @return void
@@ -609,11 +624,11 @@ class PageEncryption {
 	public static function deleteEncryptionKey( $conds ) {
 		$dbw = wfGetDB( DB_PRIMARY );
 		$dbw->delete(
-			'pageencrption_keys',  $conds,
+			'pageencrption_keys', $conds,
 			__METHOD__
 		);
 	}
-	
+
 	/**
 	 * @param array $conds
 	 * @return void
@@ -621,10 +636,11 @@ class PageEncryption {
 	public static function deletePermissions( $conds ) {
 		$dbw = wfGetDB( DB_PRIMARY );
 		$dbw->delete(
-			'pageencryption_permissions',  $conds,
+			'pageencryption_permissions', $conds,
 			__METHOD__
 		);
 	}
+
 	/**
 	 * @param OutputPage $outputPage
 	 * @param array $items
@@ -632,7 +648,7 @@ class PageEncryption {
 	 */
 	public static function addHeaditem( $outputPage, $items ) {
 		foreach ( $items as $key => $val ) {
-			list( $type, $url ) = $val;
+			[ $type, $url ] = $val;
 			switch ( $type ) {
 				case 'stylesheet':
 					$item = '<link rel="stylesheet" href="' . $url . '" />';
@@ -645,6 +661,7 @@ class PageEncryption {
 			$outputPage->addHeadItem( 'pageencryption_head_item' . $key, $item );
 		}
 	}
+
 	/**
 	 * @param Title $title
 	 * @param User|null $user
@@ -656,8 +673,8 @@ class PageEncryption {
 		}
 		$page = self::getWikiPage( $title );
 		return $page->getUser() === $user->getId();
-	}		
-		
+	}
+
 	/**
 	 * @param User $user
 	 * @return bool
@@ -667,12 +684,12 @@ class PageEncryption {
 		$admins = array_unique( array_merge( $admins, [ 'sysop' ] ) );
 		return self::matchUsernameOrGroup( $user, $admins );
 	}
-	
+
 		/**
-	 * @param User $user
-	 * @param array $groups
-	 * @return bool
-	 */
+		 * @param User $user
+		 * @param array $groups
+		 * @return bool
+		 */
 	public static function matchUsernameOrGroup( $user, $groups ) {
 		$userGroupManager = self::getUserGroupManager();
 		// ***the following prevents that an user
@@ -687,6 +704,7 @@ class PageEncryption {
 		}
 		return $isAuthorized;
 	}
+
 	/**
 	 * @param string $varName
 	 * @return array
@@ -701,6 +719,7 @@ class PageEncryption {
 		}
 		return $ret;
 	}
+
 	/**
 	 * @param MediaWiki\User\UserGroupManager $userGroupManager
 	 * @param User $user
@@ -719,6 +738,7 @@ class PageEncryption {
 		}
 		return $user_groups;
 	}
+
 	/**
 	 * @param Title $title
 	 * @return void
@@ -730,35 +750,35 @@ class PageEncryption {
 		}
 		return WikiPage::factory( $title );
 	}
-	
+
 	/**
- 	 * @see https://stackoverflow.com/questions/6101956/generating-a-random-password-in-php
-	 * @param int $length 
+	 * @see https://stackoverflow.com/questions/6101956/generating-a-random-password-in-php
+	 * @param int $length
 	 * @param string $keyspaceto select from
 	 * @return string
 	 */
 	public static function random_str( $length, $keyspace = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' ) {
-    	$str = '';
-    	$max = mb_strlen( $keyspace, '8bit' ) - 1;
-    	if ( $max < 1 ) {
-    	    throw new Exception( '$keyspace must be at least two characters long' );
-    	}
+		$str = '';
+		$max = mb_strlen( $keyspace, '8bit' ) - 1;
+		if ( $max < 1 ) {
+			throw new Exception( '$keyspace must be at least two characters long' );
+		}
 		for ( $i = 0; $i < $length; ++$i ) {
 			$str .= $keyspace[random_int( 0, $max )];
 		}
 		return $str;
 	}
-	
+
 	/**
 	 * @return string
 	 */
-	public static function getIPAddress() {	
+	public static function getIPAddress() {
 		if ( !empty( $_SERVER['HTTP_CLIENT_IP'] ) ) {
-    		return $_SERVER['HTTP_CLIENT_IP'];
-    	}
-    	if ( !empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
-    		return $_SERVER['HTTP_X_FORWARDED_FOR'];
+			return $_SERVER['HTTP_CLIENT_IP'];
 		}
-    	return $_SERVER['REMOTE_ADDR'];
+		if ( !empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+			return $_SERVER['HTTP_X_FORWARDED_FOR'];
+		}
+		return $_SERVER['REMOTE_ADDR'];
 	}
 }

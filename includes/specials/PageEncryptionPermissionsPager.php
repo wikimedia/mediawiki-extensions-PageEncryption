@@ -94,11 +94,11 @@ class PageEncryptionPermissionsPager extends TablePager {
 	 * @return string HTML
 	 * @throws MWException
 	 */
-	public function formatValue( $field, $value ) {		
+	public function formatValue( $field, $value ) {
 		/** @var object $row */
 		$row = $this->mCurrentRow;
 		$linkRenderer = $this->getLinkRenderer();
-	
+
 		$formatted = '';
 		switch ( $field ) {
 			case 'created_by':
@@ -117,7 +117,7 @@ class PageEncryptionPermissionsPager extends TablePager {
 				$title = Title::newFromID( $row->page_id );
 				$wikiPage = \PageEncryption::getWikiPage( $title );
 				$revisionRecord = $wikiPage->getRevisionRecord();
-			
+
 				// @see HistoryPager
 				$formatted = ChangesList::revDateLink( $revisionRecord, $this->parentClass->getUser(), $this->parentClass->getLanguage(),
 					$this->title );
@@ -128,7 +128,7 @@ class PageEncryptionPermissionsPager extends TablePager {
 				break;
 
 			case 'password':
-				if ( (int)$row->created_by === $this->parentClass->getUser()->getId() ) {	
+				if ( (int)$row->created_by === $this->parentClass->getUser()->getId() ) {
 					$title = Title::newFromID( $row->page_id );
 					$password = \PageEncryption::decryptSymmetric( $row->encrypted_password );
 					$formatted = Html::rawElement(
@@ -153,7 +153,7 @@ class PageEncryptionPermissionsPager extends TablePager {
 			case 'expiration_date':
 				$formatted = $row->expiration_date;
 				break;
-				
+
 			case 'viewed':
 				$formatted = $row->viewed;
 				break;
