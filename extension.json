@@ -15,9 +15,7 @@
 	},
 	"callback": "PageEncryptionHooks::onRegistration",
 	"AutoloadClasses": {
-		"PageEncryptionArticle": "includes/PageEncryptionArticle.php",
 		"PageEncryptionRevisionLookup": "includes/PageEncryptionRevisionLookup.php",
-		"PageEncryptionPage": "includes/PageEncryptionPage.php",
 		"PageEncryptionHooks": "includes/PageEncryptionHooks.php",
 		"PageEncryption": "includes/PageEncryption.php",
 		"SpecialPageEncryptionPermissions": "includes/specials/SpecialPageEncryptionPermissions.php",
@@ -25,8 +23,7 @@
 		"PageEncryptionApiCheckLatestVersion": "includes/api/PageEncryptionApiCheckLatestVersion.php"
 	},
 	"ExtensionMessagesFiles": {
-		"PageEncryptionAlias": "PageEncryption.alias.php",
-		"PageEncryptionMagic": "PageEncryptionMagic.i18n.magic.php"
+		"PageEncryptionAlias": "PageEncryption.alias.php"
 	},
 	"Hooks": {
 		"BeforeInitialize": "PageEncryptionHooks::onBeforeInitialize",

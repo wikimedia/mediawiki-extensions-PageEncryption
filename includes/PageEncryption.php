@@ -73,7 +73,7 @@ class PageEncryption {
 	}
 
 	/**
-	 * param string $password
+	 * @param string $password
 	 * @return string
 	 */
 	public static function saveProtectedKey( $password ) {
@@ -137,7 +137,7 @@ class PageEncryption {
 
 	/**
 	 * @param string $cookieValue
-	 * @return
+	 * @return bool
 	 */
 	public static function setCookie( $cookieValue ) {
 		// setcookie( 'pageencryption-passwordkey', $protected_key_encoded, array $options = []): bool
@@ -157,12 +157,11 @@ class PageEncryption {
 
 		// @TODO subtract (current time - login time)
 		$expiryValue = $sessionProvider->getRememberUserDuration() + time();
-		return $response->setCookie( self::$cookieUserKey, $cookieValue, $expiryValue, $cookieOptions );
+		$response->setCookie( self::$cookieUserKey, $cookieValue, $expiryValue, $cookieOptions );
+
+		return true;
 	}
 
-	/**
-	 * @return
-	 */
 	public static function deleteCookie() {
 		$context = RequestContext::getMain();
 		$request = $context->getRequest();
@@ -185,7 +184,7 @@ class PageEncryption {
 	 * @return string|bool
 	 */
 	public static function decryptFromAccessCodeSession( $pageId, $user_key ) {
-		$dbr = wfGetDB( DB_REPLICA );
+		$dbr = self::wfGetDB( DB_REPLICA );
 		$rows = $dbr->select( 'pageencryption_permissions', '*', [ 'page_id' => $pageId ] );
 		foreach ( $rows as $row ) {
 			if ( empty( $row->viewed ) ) {
@@ -222,7 +221,7 @@ class PageEncryption {
 	 * @return string|bool
 	 */
 	public static function decryptFromAccessCode( $pageId, $password ) {
-		$dbr = wfGetDB( DB_MASTER );
+		$dbr = self::wfGetDB( DB_MASTER );
 		$rows = $dbr->select( 'pageencryption_permissions', '*', [ 'page_id' => $pageId, 'viewed' => null ] );
 		foreach ( $rows as $row ) {
 			$protected_key = KeyProtectedByPassword::loadFromAsciiSafeString( $row->protected_key );
@@ -267,8 +266,8 @@ class PageEncryption {
 	}
 
 	/**
-	 * @param
-	 * @return
+	 * @param RevisionStoreRecord $rev
+	 * @return mixed
 	 */
 	public static function mockUpRevision( $rev ) {
 		// *** prevents error "Sessions are disabled for load entry point"
@@ -373,6 +372,7 @@ class PageEncryption {
 	}
 
 	/**
+	 * @param string $text
 	 * @return false|string
 	 */
 	public static function decryptSymmetric( $text ) {
@@ -422,7 +422,7 @@ class PageEncryption {
 	 * @return bool
 	 */
 	public static function setPermissions( $user, $title, $row, $id = null ) {
-		$dbr = wfGetDB( DB_MASTER );
+		$dbr = self::wfGetDB( DB_MASTER );
 		if ( empty( $row['expiration_date'] ) ) {
 			$row['expiration_date'] = null;
 		}
@@ -529,7 +529,7 @@ class PageEncryption {
 
 		$date = date( 'Y-m-d H:i:s' );
 
-		$dbr = wfGetDB( DB_MASTER );
+		$dbr = self::wfGetDB( DB_MASTER );
 		$res = $dbr->insert( 'pageencryption_keys', $row + [ 'updated_at' => $date, 'created_at' => $date ] );
 
 		if ( !$res ) {
@@ -603,11 +603,11 @@ class PageEncryption {
 	}
 
 	/**
-	 * @param array $conds
-	 * @return void
+	 * @param int $userId
+	 * @return array|null
 	 */
 	public static function getEncryptionKeyRecord( $userId ) {
-		$dbr = wfGetDB( DB_REPLICA );
+		$dbr = self::wfGetDB( DB_REPLICA );
 		$row = $dbr->selectRow(
 			'pageencryption_keys',
 			'*',
@@ -622,7 +622,7 @@ class PageEncryption {
 	 * @return void
 	 */
 	public static function deleteEncryptionKey( $conds ) {
-		$dbw = wfGetDB( DB_PRIMARY );
+		$dbw = self::wfGetDB( DB_PRIMARY );
 		$dbw->delete(
 			'pageencrption_keys', $conds,
 			__METHOD__
@@ -634,7 +634,7 @@ class PageEncryption {
 	 * @return void
 	 */
 	public static function deletePermissions( $conds ) {
-		$dbw = wfGetDB( DB_PRIMARY );
+		$dbw = self::wfGetDB( DB_PRIMARY );
 		$dbw->delete(
 			'pageencryption_permissions', $conds,
 			__METHOD__
@@ -685,11 +685,11 @@ class PageEncryption {
 		return self::matchUsernameOrGroup( $user, $admins );
 	}
 
-		/**
-		 * @param User $user
-		 * @param array $groups
-		 * @return bool
-		 */
+	/**
+	 * @param User $user
+	 * @param array $groups
+	 * @return bool
+	 */
 	public static function matchUsernameOrGroup( $user, $groups ) {
 		$userGroupManager = self::getUserGroupManager();
 		// ***the following prevents that an user
@@ -752,9 +752,27 @@ class PageEncryption {
 	}
 
 	/**
+	 * @param int $db
+	 * @return \Wikimedia\Rdbms\DBConnRef
+	 */
+	public static function wfGetDB( $db ) {
+		if ( !method_exists( MediaWikiServices::class, 'getConnectionProvider' ) ) {
+			return wfGetDB( DB_REPLICA );
+		}
+		$connectionProvider = MediaWikiServices::getInstance()->getConnectionProvider();
+		switch ( $db ) {
+			case DB_PRIMARY:
+				return $connectionProvider->getPrimaryDatabase();
+			case DB_REPLICA:
+			default:
+				return $connectionProvider->getReplicaDatabase();
+		}
+	}
+
+	/**
 	 * @see https://stackoverflow.com/questions/6101956/generating-a-random-password-in-php
 	 * @param int $length
-	 * @param string $keyspaceto select from
+	 * @param string $keyspace to select from
 	 * @return string
 	 */
 	public static function random_str( $length, $keyspace = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' ) {

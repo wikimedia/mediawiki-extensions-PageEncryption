@@ -183,7 +183,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		$action = $request->getVal( 'action' );
 		$new = ( $id && $id === 'new' );
 
-		$dbr = wfGetDB( DB_MASTER );
+		$dbr = \PageEncryption::wfGetDB( DB_MASTER );
 
 		if ( !empty( $action ) ) {
 
@@ -202,7 +202,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		$row = [];
 
 		if ( !$new ) {
-			$dbr = wfGetDB( DB_REPLICA );
+			$dbr = \PageEncryption::wfGetDB( DB_REPLICA );
 			$row = $dbr->selectRow( 'pageencryption_permissions', '*', [ 'id' => $id ], __METHOD__ );
 		}
 
@@ -357,7 +357,7 @@ $this->username = '';
 		\PageEncryption::setPermissions( $this->user, $this->title, $row, ( !$new ? $id : null ) );
 
 		if ( $new ) {
-			$dbr = wfGetDB( DB_MASTER );
+			$dbr = \PageEncryption::wfGetDB( DB_MASTER );
 
 			$this->latest_id = $dbr->selectField(
 				'pageencryption_permissions',

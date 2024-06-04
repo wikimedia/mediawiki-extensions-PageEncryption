@@ -31,10 +31,10 @@ use MediaWiki\MediaWikiServices;
 
 class PageEncryptionHooks {
 
-	/** @var encryptedNamespace */
+	/** @var int */
 	public static $encryptedNamespace = 2246;
 
-	/** @var admins */
+	/** @var string[] */
 	public static $admins = [ 'sysop', 'bureaucrat', 'interface-admin' ];
 
 	/**
@@ -71,6 +71,14 @@ class PageEncryptionHooks {
 	 * @return void
 	 */
 	public static function onMediaWikiServices( $services ) {
+		if ( defined( 'MW_PHPUNIT_TEST' ) && MW_PHPUNIT_TEST === true ) {
+			return;
+		}
+
+		if ( basename( $_SERVER['SCRIPT_FILENAME'], '.php' ) === 'run' ) {
+			return;
+		}
+
 		if ( !empty( $_REQUEST['action'] )
 				&& ( $_REQUEST['action'] === 'submit' || $_REQUEST['action'] === 'visualeditoredit' ) ) {
 			return;
@@ -128,6 +136,31 @@ class PageEncryptionHooks {
 			);
 
 		// MW 1.38, 1.39 and 1.40 have the same interface
+		} elseif ( version_compare( MW_VERSION, '1.42', '<' ) ) {
+			$localCache = $services->getLocalServerObjectCache();
+			$actorStoreFactory = $services->getActorStoreFactory();
+			$pageStoreFactory = $services->getPageStoreFactory();
+			$titleFactory = $services->getTitleFactory();
+
+			$pageEncryptionRevisionLookup = new PageEncryptionRevisionLookup(
+				$dbLoadBalancerFactory->getMainLB( $dbDomain ),
+				$blobStoreFactory->newSqlBlobStore( $dbDomain ),
+				$cache, // Pass cache local to wiki; Leave cache sharing to RevisionStore.
+				$localCache,
+				$commentStore,
+				$nameTables->getContentModels( $dbDomain ),
+				$nameTables->getSlotRoles( $dbDomain ),
+				$slotRoleRegistry,
+
+				$actorMigration,
+				$actorStoreFactory->getActorStore( $dbDomain ),
+				$contentHandlerFactory,
+				$pageStoreFactory->getPageStore( $dbDomain ),
+				$titleFactory,
+				$hookContainer,
+				$dbDomain, // $wikiId = WikiAwareEntity::LOCAL
+			);
+
 		} else {
 			$localCache = $services->getLocalServerObjectCache();
 			$actorStoreFactory = $services->getActorStoreFactory();
@@ -143,7 +176,6 @@ class PageEncryptionHooks {
 				$nameTables->getContentModels( $dbDomain ),
 				$nameTables->getSlotRoles( $dbDomain ),
 				$slotRoleRegistry,
-				$actorMigration,
 				$actorStoreFactory->getActorStore( $dbDomain ),
 				$contentHandlerFactory,
 				$pageStoreFactory->getPageStore( $dbDomain ),
@@ -273,7 +305,12 @@ class PageEncryptionHooks {
 		$GLOBALS['wgVisualEditorAvailableNamespaces'][self::$encryptedNamespace] = true;
 	}
 
-	public static function onUserLogoutComplete( &$user, &$inject_html, $old_name ) {
+	/**
+	 * @param User &$user User after logout (won't have name, ID, etc.)
+	 * @param string &$inject_html Any HTML to inject after the logout message.
+	 * @param string $oldName The text of the username that just logged out.
+	 */
+	public static function onUserLogoutComplete( &$user, &$inject_html, $oldName ) {
 		\PageEncryption::deleteCookie();
 	}
 
@@ -283,10 +320,10 @@ class PageEncryptionHooks {
 	 * @param OutputPage $output
 	 * @param User $user
 	 * @param WebRequest $request
-	 * @param MediaWiki $mediaWiki
+	 * @param MediaWiki|MediaWiki\Actions\ActionEntryPoint $mediaWiki
 	 * @return void
 	 */
-	public static function onBeforeInitialize( \Title &$title, $unused, \OutputPage $output, \User $user, \WebRequest $request, \MediaWiki $mediaWiki ) {
+	public static function onBeforeInitialize( \Title &$title, $unused, \OutputPage $output, \User $user, \WebRequest $request, $mediaWiki ) {
 		\PageEncryption::initialize( $user );
 	}
 
@@ -301,7 +338,7 @@ class PageEncryptionHooks {
 		$userGroups = \PageEncryption::getUserGroups( $userGroupManager, $user, true );
 
 		if ( count( array_intersect( self::$admins, $userGroups ) ) ) {
-			$dbr = wfGetDB( DB_REPLICA );
+			$dbr = \PageEncryption::wfGetDB( DB_REPLICA );
 
 			if ( !$dbr->tableExists( 'pageencryption_keys' ) ) {
 				$siteNotice = '<div class="pageencryption-sitenotice">' . wfMessage( 'pageencryption-sitenotice-missing-table' )->plain() . '</div>';

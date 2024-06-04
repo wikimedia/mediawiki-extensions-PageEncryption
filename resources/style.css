@@ -18,7 +18,7 @@
 }
 
 #mw-indicator-pageencryption a {
-	background-image: url( /mediawiki/resources/lib/ooui/themes/wikimediaui/images/icons/lock.svg?46d34 );
+	background-image: url( ./lock.svg?46d34 );
 	background-position: left center;
 	background-repeat: no-repeat;
 	display: inline-block;

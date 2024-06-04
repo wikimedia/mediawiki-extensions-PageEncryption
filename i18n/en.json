@@ -7,10 +7,19 @@
 	"specialpages-group-pageencryption": "Page Encryption",
 
 	"pageencryption": "Page Encryption",
+	"right-pageencryption-cancreateencryption": "can create encryption",
+	"action-pageencryption-cancreateencryption": "create encryption",
+
 	"pageencryptionpermissions": "Manage access keys",
 	"apihelp-pageencryption-check-latest-version-example-1": "check extension's latest version",
 	"apihelp-pageencryption-check-latest-version-summary": "check extension's latest version",
 	"pageencryption-jsmodule-managepermissions-outdated-version": "This version of PageEncryption is outdated. <a href=\"https://www.mediawiki.org/wiki/Special:ExtensionDistributor/PageEncryption\">Update</a>",
+
+	"apihelp-pageencryption-set-encryption-key-summary": "pageencryption encryption-key summary",
+	"apihelp-pageencryption-set-encryption-key-param-password": "pageencryption encryption-key password",
+	"pageencryption-jsmodule-pageproperties-outdated-version": "pageencryption outdated version",
+	"apihelp-pageencryption-set-encryption-key-example-1": "page encryption encryption-key example",
+	"apihelp-pageencryption-set-encryption-key-param-reset-key": "page encryption encryption-key reset key",
 
 	"pageencryption-jsmodule-dialog-password-error-length": "password must be between $1 and $2 characters",
 	"pageencryption-jsmodule-dialog-password-error-digit": "enter at least a digit",
