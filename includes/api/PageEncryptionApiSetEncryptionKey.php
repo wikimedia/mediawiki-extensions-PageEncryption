@@ -45,7 +45,7 @@ class PageEncryptionApiSetEncryptionKey extends ApiBase {
 		$user = $this->getUser();
 
 		if ( !$user->isAllowed( 'pageencryption-cancreateencryption' ) ) {
-			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
+			$this->dieWithError( 'apierror-pageencryption-permissions-error' );
 		}
 
 		\PageEncryption::initialize( $user );

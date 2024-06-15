@@ -130,23 +130,29 @@ class PageEncryptionPermissionsPager extends TablePager {
 			case 'password':
 				if ( (int)$row->created_by === $this->parentClass->getUser()->getId() ) {
 					$title = Title::newFromID( $row->page_id );
-					$password = \PageEncryption::decryptSymmetric( $row->encrypted_password );
-					$formatted = Html::rawElement(
-						'span',
-						[
-							'data-password' => $password,
-							'class' => 'pageencryption-managepermissions-pager-button-show-password'
-						],
-						$this->msg( 'pageencryption-managepermissions-pager-button-password-copytoclipboard' )->text()
-					)
-					. '&nbsp;' . Html::rawElement(
-						'span',
-						[
-							'data-url' => wfAppendQuery( $title->getFullURL(), 'acode=' . $password ),
-							'class' => 'pageencryption-managepermissions-pager-button-show-url'
-						],
-						$this->msg( 'pageencryption-managepermissions-pager-button-url-copytoclipboard' )->text()
-					);
+					$user_key = \PageEncryption::getUserKey();
+					if ( $user_key ) {
+						$password = \PageEncryption::decryptSymmetric( $row->encrypted_password, $user_key );
+
+						$formatted = Html::rawElement(
+							'span',
+							[
+								'data-password' => $password,
+								'class' => 'pageencryption-managepermissions-pager-button-show-password'
+							],
+							$this->msg( 'pageencryption-managepermissions-pager-button-password-copytoclipboard' )->text()
+						)
+						. '&nbsp;' . Html::rawElement(
+							'span',
+							[
+								'data-url' => wfAppendQuery( $title->getFullURL(), 'acode=' . $password ),
+								'class' => 'pageencryption-managepermissions-pager-button-show-url'
+							],
+							$this->msg( 'pageencryption-managepermissions-pager-button-url-copytoclipboard' )->text()
+						);
+					} else {
+						$formatted = 'user-key not set';
+					}
 				}
 				break;
 

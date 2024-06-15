@@ -18,16 +18,18 @@
  * @file
  * @ingroup extensions
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright ©2023, https://wikisphere.org
+ * @copyright Copyright ©2023-2024, https://wikisphere.org
  */
 use Defuse\Crypto\Crypto;
 use Defuse\Crypto\Key;
 use Defuse\Crypto\KeyProtectedByPassword;
 use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Revision\MutableRevisionRecord;
+// use MediaWiki\Revision\MutableRevisionRecord;
+use MediaWiki\Revision\MutableRevisionSlots;
 use MediaWiki\Revision\RevisionStore;
 use MediaWiki\Revision\RevisionStoreRecord;
+use MediaWiki\Revision\SlotRecord;
 
 class PageEncryption {
 	/** @var User */
@@ -288,7 +290,7 @@ class PageEncryption {
 			return self::$cachedMockUpRev[$cacheKey];
 		}
 
-		$content = $rev->getSlot( MediaWiki\Revision\SlotRecord::MAIN )->getContent();
+		$content = $rev->getSlot( SlotRecord::MAIN )->getContent();
 
 		if ( !( $content instanceof TextContent ) ) {
 			return self::$cachedMockUpRev[$cacheKey] = $rev;
@@ -321,7 +323,13 @@ class PageEncryption {
 				}
 			}
 		} else {
-			$text = self::decryptSymmetric( $text );
+			$user_key = self::getUserKey();
+			if ( $user_key !== false ) {
+				$text = self::decryptSymmetric( $text, $user_key );
+			} else {
+				// throw new MWException( 'user-key not set' );
+				$text = false;
+			}
 		}
 		if ( $text === false ) {
 			if ( $isSamePage ) {
@@ -334,9 +342,39 @@ class PageEncryption {
 		$modelId = $contentHandler->getModelID();
 
 		$slotContent = ContentHandler::makeContent( $text, $title, $modelId );
-		$revisionRecord = MutableRevisionRecord::newFromParentRevision( $rev );
-		$slots = $revisionRecord->getSlots();
-		$slots->setContent( MediaWiki\Revision\SlotRecord::MAIN, $slotContent );
+
+		// >>>>>>>>>>>>>>>>>>>>>
+		// *** we cannot use simply the following:
+
+		// $revisionRecord = MutableRevisionRecord::newFromParentRevision( $rev );
+		// $slots = $revisionRecord->getSlots();
+		// $slots->setContent( MediaWiki\Revision\SlotRecord::MAIN, $slotContent );
+
+		// since slot_revision_id is not inherited, and
+		// when the slot is inherited twice (namely on
+		// doContentModelChange) it will trigger an error
+
+		$slotsArr =	$rev->getSlots()->getSlots();
+		$slot = $slotsArr[SlotRecord::MAIN];
+
+		$row = [
+			'slot_id' => null,
+			'slot_revision_id' => $slot->getRevision(),
+			'slot_origin' => $slot->getOrigin(),
+			'content_size' => $slot->getSize(),
+			'content_sha1' => $slot->getSha1(),
+			'slot_content_id' => $slot->getContentId(),
+			'content_address' => $slot->getAddress(),
+			'role_name' => SlotRecord::MAIN,
+			'model_name' => $slot->getModel(),
+		];
+
+		$slot = new SlotRecord( (object)$row, $slotContent, $slot->isDerived() );
+
+		$slots = new MutableRevisionSlots( $slotsArr );
+		$slots->setSlot( $slot );
+
+		// <<<<<<<<<<<<<<<<<<<<<<<
 
 		$user = $rev->getUser();
 		$comment = $rev->getComment();
@@ -351,6 +389,7 @@ class PageEncryption {
 			'rev_sha1' => $rev->getSha1(),
 			'page_latest' => $rev->getId(),
 		];
+
 		return self::$cachedMockUpRev[$cacheKey] = new RevisionStoreRecord( $title, $user, $comment, (object)$row, $slots );
 	}
 
@@ -373,12 +412,10 @@ class PageEncryption {
 
 	/**
 	 * @param string $text
+	 * @param string $user_key
 	 * @return false|string
 	 */
-	public static function decryptSymmetric( $text ) {
-		if ( !$user_key = self::getUserKey() ) {
-			return false;
-		}
+	public static function decryptSymmetric( $text, $user_key ) {
 		try {
 			$text = Crypto::decrypt( $text, $user_key );
 		} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
@@ -389,13 +426,10 @@ class PageEncryption {
 
 	/**
 	 * @param string $text
-	 * @param string|null $user_key
+	 * @param string $user_key
 	 * @return false|string
 	 */
-	public static function encryptSymmetric( $text, $user_key = null ) {
-		if ( !$user_key && !$user_key = self::getUserKey() ) {
-			return false;
-		}
+	public static function encryptSymmetric( $text, $user_key ) {
 		try {
 			$text = Crypto::encrypt( $text, $user_key );
 		} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
@@ -436,9 +470,15 @@ class PageEncryption {
 			$wikiPage = self::getWikiPage( $title );
 			$revisionRecord = $wikiPage->getRevisionRecord();
 			$row['revision_id'] = $revisionRecord->getId();
+			$user_key = self::getUserKey();
+
+			if ( $user_key === false ) {
+				throw new MWException( 'user-key not set' );
+			}
+
 			do {
 				$password = self::random_str( 5 );
-				$row['encrypted_password'] = self::encryptSymmetric( $password );
+				$row['encrypted_password'] = self::encryptSymmetric( $password, $user_key );
 
 				$row_ = $dbr->selectRow(
 					'pageencryption_permissions',
@@ -447,10 +487,10 @@ class PageEncryption {
 					__METHOD__
 				);
 			} while ( $row_ !== false );
-			$contentHandler = $revisionRecord->getSlot( MediaWiki\Revision\SlotRecord::MAIN )->getContent()->getContentHandler();
+			$contentHandler = $revisionRecord->getSlot( SlotRecord::MAIN )->getContent()->getContentHandler();
 			$modelId = $contentHandler->getModelID();
 
-			$content = $revisionRecord->getSlot( MediaWiki\Revision\SlotRecord::MAIN )->getContent();
+			$content = $revisionRecord->getSlot( SlotRecord::MAIN )->getContent();
 
 			// should be instance of text
 			$contentHandler = $content->getContentHandler();
@@ -757,11 +797,12 @@ class PageEncryption {
 	 */
 	public static function wfGetDB( $db ) {
 		if ( !method_exists( MediaWikiServices::class, 'getConnectionProvider' ) ) {
-			return wfGetDB( DB_REPLICA );
+			return wfGetDB( $db );
 		}
 		$connectionProvider = MediaWikiServices::getInstance()->getConnectionProvider();
 		switch ( $db ) {
 			case DB_PRIMARY:
+			case DB_MASTER:
 				return $connectionProvider->getPrimaryDatabase();
 			case DB_REPLICA:
 			default:

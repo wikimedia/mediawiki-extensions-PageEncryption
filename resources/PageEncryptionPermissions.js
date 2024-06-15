@@ -87,7 +87,7 @@ $( function () {
 								type: 'warning',
 								label: new OO.ui.HtmlSnippet(
 									mw.msg(
-										'pageencryption-jsmodule-managepermissions-outdated-version'
+										'pageencryption-jsmodule-outdated-version'
 									)
 								),
 								// *** this does not work before ooui v0.43.0

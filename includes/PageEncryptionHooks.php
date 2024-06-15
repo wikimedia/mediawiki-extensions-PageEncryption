@@ -195,6 +195,19 @@ class PageEncryptionHooks {
 	}
 
 	/**
+	 * @param OutputPage $out
+	 * @param ParserOutput $parserOutput
+	 * @return void
+	 */
+	public static function onOutputPageParserOutput( OutputPage $out, ParserOutput $parserOutput ) {
+		$title = $out->getTitle();
+
+		if ( \PageEncryption::isEncryptedNamespace( $title ) ) {
+			$parserOutput->addWrapperDivClass( 'pageencryption-encryption-namespace' );
+		}
+	}
+
+	/**
 	 * Fetch an appropriate permission error (or none!)
 	 *
 	 * @param Title $title being checked
@@ -268,11 +281,16 @@ class PageEncryptionHooks {
 		$modelId = $contentHandler->getModelID();
 
 		$text = $content->getText();
+		$user_key = \PageEncryption::getUserKey();
 
-		$encryptedText = \PageEncryption::encryptSymmetric( $text );
+		if ( $user_key === false ) {
+			throw new MWException( 'User-key not set' );
+		}
+
+		$encryptedText = \PageEncryption::encryptSymmetric( $text, $user_key );
 
 		if ( $encryptedText === false ) {
-			throw new MWException( "Cannot encrypt" );
+			throw new MWException( 'Cannot encrypt' );
 		}
 
 		// $modelId = $slotRoleRegistry->getRoleHandler( $slotName )->getDefaultModel( $title );
