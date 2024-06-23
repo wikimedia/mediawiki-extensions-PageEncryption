@@ -19,10 +19,12 @@
  * @file
  * @ingroup extensions
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright ©2023, https://wikisphere.org
+ * @copyright Copyright ©2023-2024, https://wikisphere.org
  */
 
 require_once __DIR__ . '/PageEncryptionPermissionsPager.php';
+
+use MediaWiki\MediaWikiServices;
 
 /**
  * A special page that lists protected pages
@@ -31,23 +33,26 @@ require_once __DIR__ . '/PageEncryptionPermissionsPager.php';
  */
 class SpecialPageEncryptionPermissions extends SpecialPage {
 
-	/** @var title */
+	/** @var Title */
 	public $title;
 
-	/** @var localTitle */
+	/** @var Title */
 	public $localTitle;
 
-	/** @var isAuthorized */
+	/** @var bool */
 	public $isAuthorized;
 
-	/** @var user */
+	/** @var User */
 	private $user;
 
-	/** @var request */
+	/** @var Request */
 	private $request;
 
-	/** @var latest_id */
+	/** @var int */
 	private $latest_id;
+
+	/** @var bool */
+	private $missingPublicKey;
 
 	/**
 	 * @inheritDoc
@@ -77,7 +82,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 
 		$this->isAuthorized = \PageEncryption::isAuthorized( $user );
 
-		if ( !$user->isAllowed( 'pageencryption-cancreateencryption' ) ) {
+		if ( !$user->isAllowed( 'pageencryption-can-manage-encryption' ) ) {
 			$this->displayRestrictionError();
 			return;
 		}
@@ -99,7 +104,6 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		$request = $this->getRequest();
 
 		$this->request = $request;
-
 		$this->user = $user;
 
 		$id = $request->getVal( 'edit' );
@@ -131,7 +135,6 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		$out->addWikiMsg( 'pageencryption-managepermissions-form-preamble' );
 
 		$out->addHTML( '<br />' );
-
 		$layout = new OOUI\PanelLayout( [ 'id' => 'pageencryption-panel-layout', 'expanded' => false, 'padded' => false, 'framed' => false ] );
 
 		$layout->appendContent(
@@ -140,8 +143,16 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 					'label' => $this->msg( 'pageencryption-managepermissions-form-button-addpermission-legend' )->text(), 'items' => [
 						new OOUI\ButtonWidget(
 							[
-								'href' => wfAppendQuery( $this->localTitle->getLocalURL(), 'edit=new' ),
+								'href' => wfAppendQuery( $this->localTitle->getLocalURL(), 'edit=new&type=symmetric' ),
 								'label' => $this->msg( 'pageencryption-managepermissions-form-button-addpermission' )->text(),
+								'infusable' => true,
+								'flags' => [ 'progressive', 'primary' ],
+							]
+						),
+						new OOUI\ButtonWidget(
+							[
+								'href' => wfAppendQuery( $this->localTitle->getLocalURL(), 'edit=new&type=asymmetric' ),
+								'label' => $this->msg( 'pageencryption-managepermissions-form-button-addpermission-asymmetric' )->text(),
 								'infusable' => true,
 								'flags' => [ 'progressive', 'primary' ],
 							]
@@ -152,7 +163,6 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		);
 
 		$out->addHTML( $layout );
-
 		$out->addHTML( '<br />' );
 
 		if ( empty( $par ) ) {
@@ -181,15 +191,16 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 	protected function editPermission( $request, $out ) {
 		$id = $request->getVal( 'edit' );
 		$action = $request->getVal( 'action' );
+		$type = $request->getVal( 'type' );
 		$new = ( $id && $id === 'new' );
 
-		$dbr = \PageEncryption::wfGetDB( DB_MASTER );
+		$dbr = \PageEncryption::getDB( DB_MASTER );
 
 		if ( !empty( $action ) ) {
 
 			switch ( $action ) {
 				case 'delete':
-					\PageEncryption::deletePermissions( [ 'id' => $id ] );
+					\PageEncryption::deletePermissions( $type, [ 'id' => $id ] );
 					header( 'Location: ' . $this->localTitle->getLocalURL() );
 					return;
 
@@ -200,10 +211,9 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		}
 
 		$row = [];
-
 		if ( !$new ) {
-			$dbr = \PageEncryption::wfGetDB( DB_REPLICA );
-			$row = $dbr->selectRow( 'pageencryption_permissions', '*', [ 'id' => $id ], __METHOD__ );
+			$dbr = \PageEncryption::getDB( DB_REPLICA );
+			$row = $dbr->selectRow( "pageencryption_$type", '*', [ 'id' => $id ], __METHOD__ );
 		}
 
 		if ( !$row ) {
@@ -214,21 +224,18 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 			}
 
 			$row = [
-				'created_by' => null,
-				'page_id' => null,
-				'access_type' => null,
-				'add_permissions' => null,
-				'protected_key' => null,
-				'encrypted_content' => null,
 				'expiration_date' => null,
-				'viewed' => null,
+				'recipient_id' => null
 			];
 
 		} else {
 			$row = (array)$row;
 		}
 
-		$formDescriptor = $this->getFormDescriptor( $row, $out );
+		$type = $request->getVal( 'type' );
+		$formDescriptor = $type === 'symmetric' ?
+			$this->formDescriptorSymmetric( $row, $out )
+			: $this->formDescriptorPublicKey( $row, $out );
 
 		$messagePrefix = 'pageencryption-managepermissions';
 		$htmlForm = new OOUIHTMLForm( $formDescriptor, $this->getContext(), $messagePrefix );
@@ -258,7 +265,9 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 
 		$htmlForm->setAction(
 			wfAppendQuery( $this->localTitle->getLocalURL(),
-				'edit=' . ( !empty( $this->latest_id ) ? $this->latest_id : $id ) )
+				'type=' . $type
+				. '&edit=' . ( !empty( $this->latest_id ) ? $this->latest_id : $id )
+			)
 		);
 
 		if ( !$new || $this->latest_id ) {
@@ -282,29 +291,40 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 	 * @param Output $out
 	 * @return array
 	 */
-	protected function getFormDescriptor( $row, $out ) {
+	protected function formDescriptorSymmetric( $row, $out ) {
 		$formDescriptor = [];
-
 		$section_prefix = '';
 
+/*
 		$options = [
 			$this->msg( "pageencryption-managepermissions-form-access_type-options-symmetric_key" )->text() => 'symmetric_key',
 			$this->msg( "pageencryption-managepermissions-form-access_type-options-asymmetric_key" )->text() => 'asymmetric_key',
 		];
 
-/*
 		$formDescriptor['access_type'] = [
 			'label-message' => 'pageencryption-managepermissions-form-scope-label',
 			'type' => 'select',
 			'name' => 'access_type',
 			'required' => true,
 			'disabled' => true,
-			'section' => $section_prefix . 'form-fieldset-permissions-main',
+			'section' => $section_prefix . 'form-fieldset-permissions-main-symmetric',
 			'help-message' => 'pageencryption-managepermissions-form-scope-help',
 			'default' => $row['access_type'],
 			'options' => $options,
 		];
 */
+
+		if ( !$this->title ) {
+			$formDescriptor['page'] = [
+				'label-message' => 'pageencryption-managepermissions-form-page-label',
+				'type' => 'title',
+				'name' => 'page',
+				'exists' => true,
+				'required' => true,
+				'section' => $section_prefix . 'form-fieldset-permissions-main-symmetric',
+				'help-message' => 'pageencryption-managepermissions-form-page-help'
+			];
+		}
 
 		$expiration_date = explode( ' ', (string)$row['expiration_date'] );
 
@@ -314,25 +334,70 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 			'min' => date( 'Y-m-d' ),
 			'name' => 'expiration_date',
 			'required' => false,
-			'section' => $section_prefix . 'form-fieldset-permissions-main',
+			'section' => $section_prefix . 'form-fieldset-permissions-main-symmetric',
 			'help-message' => 'pageencryption-managepermissions-form-expiration_date-help',
 			'default' => $expiration_date[0]
 		];
 
-/*
-$this->username = '';
+		return $formDescriptor;
+	}
+
+	/**
+	 * @param array $row
+	 * @param Output $out
+	 * @return array
+	 */
+	protected function formDescriptorPublicKey( $row, $out ) {
+		$formDescriptor = [];
+		$section_prefix = '';
+
+		if ( !$this->title ) {
+			$formDescriptor['page'] = [
+				'label-message' => 'pageencryption-managepermissions-form-page-label',
+				'type' => 'title',
+				'name' => 'page',
+				'required' => true,
+				'section' => $section_prefix . 'form-fieldset-permissions-main-symmetric',
+				'help-message' => 'pageencryption-managepermissions-form-page-help'
+			];
+		}
+
+		if ( !empty( $row['recipient_id'] ) ) {
+			$user_ = User::newFromId( $row['recipient_id'] );
+			$username = $user_->getName();
+		} else {
+			$username = null;
+		}
 
 		$formDescriptor['username'] = [
-			'label-message' => 'pageencryption-managepermissions-form-usernames-label',
+			'label-message' => 'pageencryption-managepermissions-form-user-label',
 			'type' => 'user',
 			'name' => 'username',
 			'required' => true,
-			'section' => $section_prefix . 'form-fieldset-permissions-main',
-			'help-message' => 'pageencryption-managepermissions-form-usernames-help',
-			'default' => $row['username'],
-			// 'options' => array_flip( $this->usernames ),
+			'section' => $section_prefix . 'form-fieldset-permissions-main-public-key',
+			'help-message' => 'pageencryption-managepermissions-form-user-help',
+			'validation-callback' => function () {
+				if ( $this->missingPublicKey ) {
+					// @see includes/htmlform/OOUIHTMLForm.php
+					return $this->msg( 'pageencryption-managepermissions-form-user-missing-public-key' )->text();
+				}
+				return true;
+			},
+			'default' => $username
 		];
-*/
+
+		$expiration_date = explode( ' ', (string)$row['expiration_date'] );
+
+		$formDescriptor['expiration_date'] = [
+			'label-message' => 'pageencryption-managepermissions-form-expiration_date-label',
+			'type' => 'date',
+			'min' => date( 'Y-m-d' ),
+			'name' => 'expiration_date',
+			'required' => false,
+			'section' => $section_prefix . 'form-fieldset-permissions-main-public-key',
+			'help-message' => 'pageencryption-managepermissions-form-expiration_date-help',
+			'default' => $expiration_date[0]
+		];
 
 		return $formDescriptor;
 	}
@@ -344,23 +409,48 @@ $this->username = '';
 	 */
 	public function onSubmit( $data, $htmlForm ) {
 		$request = $this->getRequest();
-
+		$dbr = \PageEncryption::getDB( DB_MASTER );
 		$id = $request->getVal( 'edit' );
-
 		$new = ( $id && $id === 'new' );
+		$title = ( array_key_exists( 'page', $data ) ? $title = Title::newFromText( $data['page'] )
+			: $this->title );
 
-		$row = [
-			'access_type' => $data['access_type'],
-			'expiration_date' => $data['expiration_date']
-		];
+		if ( array_key_exists( 'username', $data ) ) {
+			$type = 'asymmetric';
+			$this->missingPublicKey = false;
 
-		\PageEncryption::setPermissions( $this->user, $this->title, $row, ( !$new ? $id : null ) );
+			$recipient = MediaWikiServices::getInstance()->getUserFactory()
+				->newFromName( $data['username'] );
+
+			$public_key = \PageEncryption::getPublicKey( $recipient );
+
+			if ( empty( $public_key ) ) {
+				$this->missingPublicKey = true;
+				return Status::newFatal( 'formerror' );
+			}
+
+			\PageEncryption::setPermissionsAsymmetric(
+				$this->user,
+				$title,
+				$recipient,
+				$public_key,
+				$data['expiration_date'],
+				( !$new ? $id : null )
+			);
+
+		} else {
+			$type = 'symmetric';
+			\PageEncryption::setPermissionsSymmetric(
+				$this->user,
+				$title,
+				$data['expiration_date'],
+				( !$new ? $id : null )
+			);
+		}
 
 		if ( $new ) {
-			$dbr = \PageEncryption::wfGetDB( DB_MASTER );
-
 			$this->latest_id = $dbr->selectField(
-				'pageencryption_permissions',
+				"pageencryption_$type",
 				'id',
 				[],
 				__METHOD__,
@@ -369,7 +459,6 @@ $this->username = '';
 		}
 
 		header( 'Location: ' . $this->localTitle->getLocalURL() );
-
 		// return true;
 	}
 
@@ -404,6 +493,7 @@ $this->username = '';
 			'label-message' => 'pageencryption-managepermissions-form-search-page-label',
 			'type' => 'title',
 			'name' => 'page',
+			'exists' => true,
 			'required' => false,
 			'default' => ( !empty( $page ) ? $page : null ),
 		];

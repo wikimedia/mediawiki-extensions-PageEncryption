@@ -2,23 +2,25 @@
 	"@metadata": {
 		"authors": []
 	},
-	"pageencryption-extension-desc": "Page level encryption based on defuse/php-encryption and OOUI",
 
+	"pageencryption-extension-desc": "Page-level symmetric and asymmetric encryption in a dedicated namespace, completed with disposable access codes and access management",
 	"specialpages-group-pageencryption": "Page Encryption",
-
 	"pageencryption": "Page Encryption",
-	"right-pageencryption-cancreateencryption": "can create encryption",
-	"action-pageencryption-cancreateencryption": "create encryption",
 
-	"pageencryptionpermissions": "Manage access keys",
+	"right-pageencryption-can-manage-encryption": "can manage encryption",
+	"action-pageencryption-can-manage-encryption": "manage encryption",
+	"right-pageencryption-can-handle-encryption": "can handle encryption",
+	"action-pageencryption-can-handle-encryption": "handle encryption",
+
+	"pageencryptionpermissions": "Manage access",
 	"pageencryption-jsmodule-outdated-version": "This version of PageEncryption is outdated. <a href=\"https://www.mediawiki.org/wiki/Special:ExtensionDistributor/PageEncryption\">Update</a>",
 
 	"apihelp-pageencryption-check-latest-version-example-1": "check extension's latest version",
 	"apihelp-pageencryption-check-latest-version-summary": "check extension's latest version",
-	"apihelp-pageencryption-set-encryption-key-summary": "pageencryption encryption-key summary",
-	"apihelp-pageencryption-set-encryption-key-param-password": "pageencryption encryption-key password",
-	"apihelp-pageencryption-set-encryption-key-example-1": "page encryption encryption-key example",
-	"apihelp-pageencryption-set-encryption-key-param-reset-key": "page encryption encryption-key reset key",
+	"apihelp-pageencryption-set-encryption-keys-summary": "pageencryption encryption-key summary",
+	"apihelp-pageencryption-set-encryption-keys-param-password": "pageencryption encryption-key password",
+	"apihelp-pageencryption-set-encryption-keys-example-1": "page encryption encryption-key example",
+	"apihelp-pageencryption-set-encryption-keys-param-reset-key": "page encryption encryption-key reset key",
 
 	"pageencryption-jsmodule-dialog-password-error-length": "password must be between $1 and $2 characters",
 	"pageencryption-jsmodule-dialog-password-error-digit": "enter at least a digit",
@@ -26,28 +28,33 @@
 	"pageencryption-jsmodule-dialog-password-error-prohibited": "the following characters are prohibited: $1",
 
 	"pageencryption-jsmodule-dialog-goback": "Go back",
-	"pageencryption-navigation": "Access keys",
+	"pageencryption-navigation": "Manage access",
 	"pageencryption-sidebar-section": "Encrypted pages",
 	"pageencryption-managepermissions-pager-button-password-copytoclipboard": "get code",
 	"pageencryption-managepermissions-pager-button-url-copytoclipboard": "get url",
 
-	"pageencryption-managepermissions-form-preamble": "Here you can grant access to this document based on a disposable symmetric key or an asymmetric key (only for registered users). A disposable symmetric key can be used only once and it won't be saved on the server. The current revision will be encrypted using the preferred method and the authorized user will be able to access uniquely the current encrypted revision.",
-	"pageencryption-managepermissions-form-fieldset-permissions-main": "Create access key",
+	"pageencryption-managepermissions-form-user-label": "user",
+	"pageencryption-managepermissions-form-preamble": "Here you can grant access to this document based on a disposable symmetric key or the recipient public key (if any). A disposable symmetric key can be used only once and it won't be saved on the server. The current revision will be encrypted using the preferred method and the authorized user will be able to access uniquely the current encrypted revision.",
+	"pageencryption-managepermissions-form-fieldset-permissions-main-symmetric": "Create access key",
+	"pageencryption-managepermissions-form-fieldset-permissions-main-public-key": "Encrypt by recipient public key",
 	"pageencryption-managepermissions-form-scope-label": "Key",
+
+	"pageencryption-managepermissions-form-page-label": "Page",
+	"pageencryption-managepermissions-form-page-help": "",
 	"pageencryption-managepermissions-form-expiration_date-label": "Expiration date",
 	"pageencryption-managepermissions-form-expiration_date-help": "can be null",
 	"pageencryption-managepermissions-form-button-submit": "Save",
 	"pageencryption-managepermissions-form-button-delete": "Delete",
-
+	"pageencryption-managepermissions-form-user-missing-public-key": "missing public key",
 	"pageencryption-jsmodule-managepermissions-copied-to-clipboard": "copied to clipboard",
 
 	"pageencryption-managepermissions-description-specific": "",
 	"pageencryption-managepermissions-form-button-addpermission-legend": "",
-	"pageencryption-managepermissions-form-button-addpermission": "New access key",
-
+	"pageencryption-managepermissions-form-button-addpermission": "New access key (symmetric)",
+	"pageencryption-managepermissions-form-button-addpermission-asymmetric": "New recipient (asymmetric)",
 	"pageencryption-managepermissions-table-empty": "No entries",
 
-	"pageencryption-managepermissions-form-returnlink": "← [[$1|List of access keys]]",
+	"pageencryption-managepermissions-form-returnlink": "← [[$1|List of keys]]",
 
 	"pageencryption-managepermissions-return": "← [[$1|$2]]",
 
@@ -55,10 +62,11 @@
 	"pageencryption-managepermissions-pager-header-page": "page",
 	"pageencryption-managepermissions-pager-header-revision": "revision",
 	"pageencryption-managepermissions-pager-header-access_type": "access type",
-	"pageencryption-managepermissions-pager-header-password": "password",
+	"pageencryption-managepermissions-pager-header-password": "access url",
 	"pageencryption-managepermissions-pager-header-expiration_date": "expiration date",
 	"pageencryption-managepermissions-pager-header-viewed": "viewed",
 	"pageencryption-managepermissions-pager-header-actions": "actions",
+	"pageencryption-managepermissions-pager-header-recipient": "recipient",
 
 	"pageencryption-managepermissions-form-search-legend": "Filter",
 	"pageencryption-managepermissions-form-search-created_by-label": "Created by",
@@ -80,13 +88,12 @@
 
 	"pageencryption-sitenotice-decryption-failed": "decryption failed",
 	"pageencryption-sitenotice-decryption-from-access-code": "Decrypted content will remain available during this browser session.",
-
-	"pageencryption-jsmodule-dialog-field-password": "Enter a password to protect your encrypted pages. The password won't be stored server-side, and it will be used to create and unlock a symmetric key used to encrypt/decrypt your confidential data. If you lose it, your documents cannot be recovered.",
+	"pageencryption-jsmodule-dialog-field-password-all": "Enter a password (different from that used to signin) to create symmetric and asymmetric keys to encrypt your documents or to access encrypted documents addressed to you. The password won't be stored server-side, if your lose or change it, documents encrypted using that key cannot be recovered.",
 
 	"pageencryption-jsmodule-dialog-password-error-nomatch": "passwords do not match",
-	"pageencryption-jsmodule-dialog-field-password-reenter": "Enter the password you have previously set. (because it is only stored client-side, it must be re-entered each time you sign-in)",
+	"pageencryption-jsmodule-dialog-field-password-reenter": "Enter the password you have previously set. (because it is only stored client-side, it must be re-entered each time you need to encrypt/decrypt an article)",
 
-	"pageencryption-jsmodule-dialog-field-password-reset": "Attention! If you have really lost your password you can set another password but all your pages encrypted using a key protected with your previous password cannot be recovered using a new password! Set a new password if you really lost your previous password, you want to change your password and/or you don't care!",
+	"pageencryption-jsmodule-dialog-field-password-reset": "Attention! If you have really lost your password you can set another password but all the articles encrypted using a key protected or generated with your previous password cannot be recovered using a new password! Set a new password if you really lost your previous password, you want to change your password and/or you don't care!",
 	"pageencryption-error-message-password-doesnotmatch": "password is not correct",
 	"pageencryption-error-message-cannot-set-cookie": "cannot set cookie",
 	"pageencryption-error-message-cannot-save-encryptionkey": "cannot save encryption key",

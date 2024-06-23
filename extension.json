@@ -1,7 +1,7 @@
 {
 	"name": "PageEncryption",
 	"author": "thomas-topway-it",
-	"version": "1.1",
+	"version": "1.2",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageEncryption",
 	"descriptionmsg": "pageencryption-extension-desc",
 	"license-name": "GPL-2.0-or-later",
@@ -19,7 +19,7 @@
 		"PageEncryptionHooks": "includes/PageEncryptionHooks.php",
 		"PageEncryption": "includes/PageEncryption.php",
 		"SpecialPageEncryptionPermissions": "includes/specials/SpecialPageEncryptionPermissions.php",
-		"PageEncryptionApiSetEncryptionKey": "includes/api/PageEncryptionApiSetEncryptionKey.php",
+		"PageEncryptionApiSetEncryptionKeys": "includes/api/PageEncryptionApiSetEncryptionKeys.php",
 		"PageEncryptionApiCheckLatestVersion": "includes/api/PageEncryptionApiCheckLatestVersion.php"
 	},
 	"ExtensionMessagesFiles": {
@@ -45,7 +45,7 @@
 		"PageEncryptionPermissions": "SpecialPageEncryptionPermissions"
 	},
 	"APIModules": {
-		"pageencryption-set-encryption-key": "PageEncryptionApiSetEncryptionKey",
+		"pageencryption-set-encryption-keys": "PageEncryptionApiSetEncryptionKeys",
 		"pageencryption-check-latest-version": "PageEncryptionApiCheckLatestVersion"
 	},
 	"namespaces": [
@@ -61,16 +61,42 @@
 		}
 	],
 	"GroupPermissions": {
+		"sysop": {
+			"pageencryption-can-manage-encryption": true,
+			"pageencryption-can-handle-encryption": true
+		},
+		"bureaucrat": {
+			"pageencryption-can-manage-encryption": true,
+			"pageencryption-can-handle-encryption": true
+		},
 		"user": {
-			"pageencryption-cancreateencryption": true
+			"pageencryption-can-manage-encryption": false,
+			"pageencryption-can-handle-encryption": false
+		},
+		"pageencryption-admin": {
+			"pageencryption-can-manage-encryption": true,
+			"pageencryption-can-handle-encryption": true
+		},
+		"pageencryption-recipient": {
+			"pageencryption-can-manage-encryption": false,
+			"pageencryption-can-handle-encryption": true
 		}
 	},
 	"AddGroups": {
+		"pageencryption-admin": [
+			"pageencryption-admin",
+			"pageencryption-recipient"
+		]
 	},
 	"RemoveGroups": {
+		"pageencryption-admin": [
+			"pageencryption-admin",
+			"pageencryption-recipient"
+		]
 	},
 	"AvailableRights": [
-		"pageencryption-cancreateencryption"
+		"pageencryption-can-manage-encryption",
+		"pageencryption-can-handle-encryption"
 	],
 	"ResourceFileModulePaths": {
 		"localBasePath": "resources",
@@ -96,7 +122,7 @@
 			"messages": [
 				"pageencryption-jsmodule-dialog-save",
 				"pageencryption-jsmodule-dialog-cancel",
-				"pageencryption-jsmodule-dialog-field-password",
+				"pageencryption-jsmodule-dialog-field-password-all",
 				"pageencryption-jsmodule-dialog-field-password-reenter",
 				"pageencryption-jsmodule-dialog-field-password-reset",
 				"pageencryption-jsmodule-lost-password",

@@ -19,7 +19,7 @@
  * @file
  * @ingroup extensions
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright ©2023, https://wikisphere.org
+ * @copyright Copyright ©2023-2024, https://wikisphere.org
  */
 
 if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
@@ -46,8 +46,12 @@ class PageEncryptionHooks {
 		$dbType = $updater->getDB()->getType();
 		$array = [
 			[
-				'table' => 'pageencryption_permissions',
-				'filename' => '../' . $dbType . '/pageencryption_permissions.sql'
+				'table' => 'pageencryption_symmetric',
+				'filename' => '../' . $dbType . '/pageencryption_symmetric.sql'
+			],
+			[
+				'table' => 'pageencryption_asymmetric',
+				'filename' => '../' . $dbType . '/pageencryption_asymmetric.sql'
 			],
 			[
 				'table' => 'pageencryption_keys',
@@ -71,10 +75,12 @@ class PageEncryptionHooks {
 	 * @return void
 	 */
 	public static function onMediaWikiServices( $services ) {
-		if ( defined( 'MW_PHPUNIT_TEST' ) && MW_PHPUNIT_TEST === true ) {
+		if ( defined( 'MW_PHPUNIT_TEST' ) ) {
 			return;
 		}
 
+		// *** this prevents the error "Cannot replace an active service: DBLoadBalancer"
+		// caused by MediaWikiServices::getInstance()->disableStorage();
 		if ( basename( $_SERVER['SCRIPT_FILENAME'], '.php' ) === 'run' ) {
 			return;
 		}
@@ -208,15 +214,10 @@ class PageEncryptionHooks {
 	}
 
 	/**
-	 * Fetch an appropriate permission error (or none!)
-	 *
-	 * @param Title $title being checked
-	 * @param User $user whose access is being checked
-	 * @param string $action being checked
-	 * @param array|string|MessageSpecifier &$result User
-	 *   permissions error to add. If none, return true. $result can be
-	 *   returned as a single error message key (string), or an array of
-	 *   error message keys when multiple messages are needed
+	 * @param Title $title
+	 * @param User $user
+	 * @param string $action
+	 * @param array|string|MessageSpecifier &$result
 	 * @return bool
 	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/getUserPermissionsErrors
 	 */
@@ -233,7 +234,7 @@ class PageEncryptionHooks {
 			return true;
 		}
 
-		if ( !$title->isKnown() && $user->isAllowed( 'pageencryption-cancreateencryption' ) ) {
+		if ( !$title->isKnown() && $user->isAllowed( 'pageencryption-can-manage-encryption' ) ) {
 			return true;
 		}
 
@@ -356,7 +357,7 @@ class PageEncryptionHooks {
 		$userGroups = \PageEncryption::getUserGroups( $userGroupManager, $user, true );
 
 		if ( count( array_intersect( self::$admins, $userGroups ) ) ) {
-			$dbr = \PageEncryption::wfGetDB( DB_REPLICA );
+			$dbr = \PageEncryption::getDB( DB_REPLICA );
 
 			if ( !$dbr->tableExists( 'pageencryption_keys' ) ) {
 				$siteNotice = '<div class="pageencryption-sitenotice">' . wfMessage( 'pageencryption-sitenotice-missing-table' )->plain() . '</div>';
@@ -411,7 +412,14 @@ class PageEncryptionHooks {
 	public static function onBeforePageDisplay( OutputPage $outputPage, Skin $skin ) {
 		global $wgResourceBasePath;
 
+		$user = $skin->getUser();
 		$title = $outputPage->getTitle();
+
+		if ( $user->isAllowed( 'pageencryption-can-manage-encryption' )
+			|| $user->isAllowed( 'pageencryption-can-handle-encryption' ) ) {
+			$outputPage->addModules( [ 'ext.PageEncryptionPassword' ] );
+			\PageEncryption::addJsConfigVars( $outputPage, $title, $user );
+		}
 
 		if ( !\PageEncryption::isEncryptedNamespace( $title ) ) {
 			return;
@@ -421,15 +429,8 @@ class PageEncryptionHooks {
 			[ 'stylesheet', $wgResourceBasePath . '/extensions/PageEncryption/resources/style.css' ],
 		] );
 
-		$outputPage->addModules( [ 'ext.PageEncryptionPassword' ] );
-
 		if ( $title->isKnown() ) {
 			\PageEncryption::addIndicator( $outputPage );
-		}
-
-		$user = $skin->getUser();
-		if ( $user->isAllowed( 'pageencryption-cancreateencryption' ) ) {
-			\PageEncryption::addJsConfigVars( $outputPage, $title, $user );
 		}
 	}
 
@@ -455,7 +456,8 @@ class PageEncryptionHooks {
 			return;
 		}
 
-		if ( !\PageEncryption::isEditor( $title, $user ) || !$user->isAllowed( 'pageencryption-cancreateencryption' ) ) {
+		if ( !\PageEncryption::isEditor( $title, $user )
+			|| !$user->isAllowed( 'pageencryption-can-manage-encryption' ) ) {
 			return;
 		}
 

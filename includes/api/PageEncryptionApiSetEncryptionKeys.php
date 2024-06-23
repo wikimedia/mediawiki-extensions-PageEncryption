@@ -22,7 +22,7 @@
  * @copyright Copyright ©2023, https://wikisphere.org
  */
 
-class PageEncryptionApiSetEncryptionKey extends ApiBase {
+class PageEncryptionApiSetEncryptionKeys extends ApiBase {
 
 	/**
 	 * @inheritDoc
@@ -44,16 +44,15 @@ class PageEncryptionApiSetEncryptionKey extends ApiBase {
 	public function execute() {
 		$user = $this->getUser();
 
-		if ( !$user->isAllowed( 'pageencryption-cancreateencryption' ) ) {
+		if ( !$user->isAllowed( 'pageencryption-can-manage-encryption' )
+			&& !$user->isAllowed( 'pageencryption-can-handle-encryption' ) ) {
 			$this->dieWithError( 'apierror-pageencryption-permissions-error' );
 		}
 
 		\PageEncryption::initialize( $user );
 
 		$result = $this->getResult();
-
 		$params = $this->extractRequestParams();
-
 		$row = \PageEncryption::getEncryptionKeyRecord( $user->getId() );
 
 		if ( $row ) {
@@ -110,8 +109,8 @@ class PageEncryptionApiSetEncryptionKey extends ApiBase {
 	 */
 	protected function getExamplesMessages() {
 		return [
-			'action=pageencryption-set-encryption-key'
-			=> 'apihelp-pageencryption-set-encryption-key-example-1'
+			'action=pageencryption-set-encryption-keys'
+			=> 'apihelp-pageencryption-set-encryption-keys-example-1'
 		];
 	}
 }
