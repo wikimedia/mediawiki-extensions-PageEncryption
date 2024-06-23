@@ -16,23 +16,18 @@
  *
  * @file
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright ©2023, https://wikisphere.org
+ * @copyright Copyright ©2023-2024, https://wikisphere.org
  */
 
 $( function () {
 	var WindowManager;
 	var DialogName = 'Dialog';
-	var CookieName = 'pageencryption-userkey';
 	var Model = {};
-	var EncryptedNamespace = 2246;
 	var PasswordInputField;
 	var PasswordConfirmationInputField;
 	var MessageWidget;
-	var KeyRecordIsSet = mw.config.get( 'pageencryption-protected-key-isSet' );
-	var UserkeyCookieIsSet = mw.config.get( 'pageencryption-userkey-cookie-isSet' );
 	var Booklet;
-
-	// console.log(mw.config);
+	var Config = mw.config.get( 'pageencryption-config' );
 
 	function ProcessDialog( config ) {
 		ProcessDialog.super.call( this, config );
@@ -96,7 +91,7 @@ $( function () {
 		( MessageWidget = new OO.ui.MessageWidget( {
 			type: 'info',
 			// inline: true,
-			label: mw.msg( 'pageencryption-jsmodule-dialog-field-password' )
+			label: mw.msg( 'pageencryption-jsmodule-dialog-field-password-all' )
 		} ) );
 
 		// MessageWidget.toggle(false)
@@ -127,7 +122,7 @@ $( function () {
 			// MessageWidget resides on page one
 			MessageWidget.setType( 'info' );
 			MessageWidget.setLabel(
-				mw.msg( 'pageencryption-jsmodule-dialog-field-password' )
+				mw.msg( 'pageencryption-jsmodule-dialog-field-password-all' )
 			);
 		} );
 
@@ -204,7 +199,7 @@ $( function () {
 
 		Booklet.addPages( [ page1, page2 ] );
 
-		Booklet.setPage( !KeyRecordIsSet ? 'one' : 'two' );
+		Booklet.setPage( !Config.protectedKeyIsSet ? 'one' : 'two' );
 
 		var content = new OO.ui.PanelLayout( {
 			$content: Booklet.$element,
@@ -227,7 +222,7 @@ $( function () {
 		}
 
 		// or use Booklet.getCurrentPage().name
-		if ( !KeyRecordIsSet ) {
+		if ( !Config.protectedKeyIsSet ) {
 			var password = Model.passwordInput.getValue();
 			var passwordConfirm = Model.passwordConfirmationInput.getValue();
 
@@ -287,7 +282,7 @@ $( function () {
 		}
 
 		var payload = {
-			action: 'pageencryption-set-encryption-key',
+			action: 'pageencryption-set-encryption-keys',
 			password: password,
 			'reset-key': Booklet.getCurrentPage().name === 'one' ? 1 : 0
 		};
@@ -308,7 +303,7 @@ $( function () {
 								.postWithToken( 'csrf', postData )
 								.done( function ( res ) {
 									// console.log("res", res);
-									if ( !( 'pageencryption-set-encryption-key' in res ) ) {
+									if ( !( payload.action in res ) ) {
 										reject(
 											new OO.ui.Error( res, {
 												recoverable: true,
@@ -316,7 +311,7 @@ $( function () {
 											} )
 										);
 									} else {
-										var value = res[ 'pageencryption-set-encryption-key' ];
+										var value = res[ payload.action ];
 										if ( value.message !== null ) {
 											reject(
 												new OO.ui.Error( value.message, {
@@ -400,24 +395,18 @@ $( function () {
 		} );
 
 		WindowManager = createWindowManager();
-
 		WindowManager.addWindows( [ processDialog ] );
-
 		WindowManager.openWindow( processDialog );
 	}
 
-	//  *** httpOnly cookies cannot be accessed client-side
-	// function userKeyIsSet() {
-	// 	return mw.cookie.get(CookieName, mw.config.get("pageencryption-wgCookiePrefix"));
-	// }
-
-	function isEncryptedNamespace() {
-		return mw.config.get( 'wgNamespaceNumber' ) === EncryptedNamespace;
+	if ( Config.canHandleEncryption && !Config.publicKeyIsSet ) {
+		openDialog();
+		return;
 	}
 
-	if (
-		mw.config.get( 'pageencryption-user-is-editor' ) &&
-		( !KeyRecordIsSet || !UserkeyCookieIsSet )
+	// && Config.isEditor
+	if ( Config.isEncryptedNamespace && Config.canManageEncryption &&
+		( !Config.protectedKeyIsSet || !Config.userkeyCookieIsSet )
 	) {
 		openDialog();
 	}

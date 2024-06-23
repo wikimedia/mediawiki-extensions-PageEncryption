@@ -19,10 +19,11 @@
  * @file
  * @ingroup extensions
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright ©2023, https://wikisphere.org
+ * @copyright Copyright ©2023-2024, https://wikisphere.org
  */
 
 use MediaWiki\Linker\LinkRenderer;
+use MediaWiki\MediaWikiServices;
 
 class PageEncryptionPermissionsPager extends TablePager {
 
@@ -65,13 +66,14 @@ class PageEncryptionPermissionsPager extends TablePager {
 		if ( !$this->title && $this->parentClass->isAuthorized ) {
 			$headers = [
 				'created_by' => 'pageencryption-managepermissions-pager-header-created_by',
+				'page_id' => 'pageencryption-managepermissions-pager-header-page',
 			];
 		}
 
 		$headers = array_merge( $headers, [
-			'page_id' => 'pageencryption-managepermissions-pager-header-page',
-			'revision' => 'pageencryption-managepermissions-pager-header-revision',
+		'revision' => 'pageencryption-managepermissions-pager-header-revision',
 			'access_type' => 'pageencryption-managepermissions-pager-header-access_type',
+			'recipient_id' => 'pageencryption-managepermissions-pager-header-recipient',
 			'password' => 'pageencryption-managepermissions-pager-header-password',
 			'expiration_date' => 'pageencryption-managepermissions-pager-header-expiration_date',
 			'viewed' => 'pageencryption-managepermissions-pager-header-viewed',
@@ -106,6 +108,15 @@ class PageEncryptionPermissionsPager extends TablePager {
 				$formatted = $user->getName();
 				break;
 
+			case 'recipient_id':
+				if ( $row->access_type === 'asymmetric' ) {
+					$user = User::newFromId( $row->recipient_id );
+					$formatted = $user->getName();
+				} else {
+					$formatted = 'n/a';
+				}
+				break;
+
 			case 'page_id':
 				$formatted = '';
 				$title = Title::newFromID( $row->page_id );
@@ -130,45 +141,75 @@ class PageEncryptionPermissionsPager extends TablePager {
 			case 'password':
 				if ( (int)$row->created_by === $this->parentClass->getUser()->getId() ) {
 					$title = Title::newFromID( $row->page_id );
-					$user_key = \PageEncryption::getUserKey();
-					if ( $user_key ) {
-						$password = \PageEncryption::decryptSymmetric( $row->encrypted_password, $user_key );
 
+					if ( $row->access_type === 'symmetric' ) {
+						$user_key = \PageEncryption::getUserKey();
+						if ( $user_key ) {
+							$password = \PageEncryption::decryptSymmetric( $row->encrypted_password, $user_key );
+
+							$formatted =
+								// Html::rawElement(
+								// 'span',
+								// [
+								// 	'data-password' => $password,
+								// 	'class' => 'pageencryption-managepermissions-pager-button-show-password'
+								// ],
+								// $this->msg( 'pageencryption-managepermissions-pager-button-password-copytoclipboard' )->text()
+							// ) .
+							// . '&nbsp;' .
+							 Html::rawElement(
+								'span',
+								[
+									'data-url' => wfAppendQuery( $title->getFullURL(), 'acode=' . $password ),
+									'class' => 'pageencryption-managepermissions-pager-button-show-url'
+								],
+								$this->msg( 'pageencryption-managepermissions-pager-button-url-copytoclipboard' )->text()
+							);
+						} else {
+							$formatted = 'user-key not set';
+						}
+					} else {
 						$formatted = Html::rawElement(
 							'span',
 							[
-								'data-password' => $password,
-								'class' => 'pageencryption-managepermissions-pager-button-show-password'
-							],
-							$this->msg( 'pageencryption-managepermissions-pager-button-password-copytoclipboard' )->text()
-						)
-						. '&nbsp;' . Html::rawElement(
-							'span',
-							[
-								'data-url' => wfAppendQuery( $title->getFullURL(), 'acode=' . $password ),
+								'data-url' => $title->getFullURL(),
 								'class' => 'pageencryption-managepermissions-pager-button-show-url'
 							],
 							$this->msg( 'pageencryption-managepermissions-pager-button-url-copytoclipboard' )->text()
 						);
-					} else {
-						$formatted = 'user-key not set';
 					}
 				}
 				break;
 
 			case 'expiration_date':
-				$formatted = $row->expiration_date;
+				$date = ( (array)$row )[$field];
+				if ( $date ) {
+					$formatted = htmlspecialchars(
+						$this->getLanguage()->userDate(
+							wfTimestamp( TS_MW, $date ),
+							$this->getUser()
+						)
+					);
+				}
 				break;
 
 			case 'viewed':
-				$formatted = $row->viewed;
+				$date = ( (array)$row )[$field];
+				if ( $date ) {
+					$formatted = htmlspecialchars(
+						$this->getLanguage()->userTimeAndDate(
+							wfTimestamp( TS_RFC2822, $date ),
+							$this->getUser()
+						)
+					);
+				}
 				break;
 
 			case 'actions':
 				$link = '<span class="mw-ui-button mw-ui-progressive">'
 					. $this->msg( 'pageencryption-managepermissions-pager-button-edit' )->text() . '</span>';
 				$title = SpecialPage::getTitleFor( 'PageEncryptionPermissions', $this->title );
-				$query = [ 'edit' => $row->id ];
+				$query = [ 'edit' => $row->id, 'type' => $row->access_type ];
 				$formatted = Linker::link( $title, $link, [], $query );
 				break;
 
@@ -180,6 +221,75 @@ class PageEncryptionPermissionsPager extends TablePager {
 	}
 
 	/**
+	 * @inheritDoc
+	 */
+	public function reallyDoQuery( $offset, $limit, $order ) {
+		$fname = static::class . '::reallyDoQuery';
+		// $dbr = $this->getRecacheDB();
+		$dbr = \PageEncryption::getDB( DB_REPLICA );
+
+		// @TODO use https://www.mediawiki.org/wiki/Manual:Database_access#UnionQueryBuilder
+		// MW >= 1.41
+		$table1 = $dbr->tableName( 'pageencryption_symmetric' );
+		$table2 = $dbr->tableName( 'pageencryption_asymmetric' );
+
+		$where = [];
+		$pageId = null;
+		if ( $this->title ) {
+			$pageId = $this->title->getArticleID();
+
+		} else {
+			$page = $this->request->getVal( 'page' );
+
+			if ( is_int( $page ) ) {
+				$title_ = Title::newFromText( $page );
+				$pageId = $title_->getArticleId();
+			}
+
+			if ( !$this->parentClass->isAuthorized ) {
+				$created_by = $this->parentClass->getUser()->getId();
+
+			} else {
+				$created_by_ = $this->request->getVal( 'created_by' );
+
+				if ( !empty( $created_by_ ) ) {
+					$user_ = MediaWikiServices::getInstance()->getUserFactory()
+						->newFromName( $created_by_ );
+					$created_by = $user_->getId();
+				}
+			}
+		}
+
+		if ( $pageId !== null ) {
+			$where[] = "page_id = $pageId";
+		}
+
+		if ( !empty( $created_by ) ) {
+			$where[] = "created_by = $created_by";
+		}
+
+		$where = implode( ' AND ', $where );
+		if ( $where ) {
+			$where = "WHERE $where";
+		}
+
+		$query = "SELECT * FROM (
+SELECT id, created_by, page_id, revision_id, null as recipient_id, encrypted_password, expiration_date, viewed, viewed_metadata, updated_at, created_at, 'symmetric' AS access_type FROM $table1 $where
+UNION
+SELECT id, created_by, page_id, revision_id, recipient_id, null as encrypted_password, expiration_date, viewed, viewed_metadata, updated_at, created_at, 'asymmetric' AS access_type FROM $table2 $where
+) AS t ORDER BY t.created_at";
+
+		$sql = $dbr->limitResult( $query, $limit, $offset );
+
+		// phpcs:ignore MediaWiki.Usage.DbrQueryUsage.DbrQueryFound
+		$res = $dbr->query( $sql, $fname );
+
+		// return new Wikimedia\Rdbms\FakeResultWrapper( $ret );
+		return $res;
+	}
+
+	/**
+	 * *** currently unused
 	 * @return array
 	 */
 	public function getQueryInfo() {

@@ -1,12 +1,10 @@
-
-CREATE TABLE IF NOT EXISTS pageencryption_permissions (
+CREATE TABLE IF NOT EXISTS /*_*/pageencryption_asymmetric (
   `id` int(11) NOT NULL,
   `created_by` int(11) NOT NULL,
   `page_id` int(11) NULL,
   `revision_id` int(11) NULL,
-  `access_type` enum('symmetric', 'asymmetric') NOT NULL,
-  `protected_key` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `encrypted_password` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `recipient_id` int(11) NOT NULL,
+  `nonce` TINYBLOB NOT NULL,
   `encrypted_content` BLOB NOT NULL,
   `expiration_date` datetime NULL,
   `viewed` datetime NULL,
@@ -16,10 +14,9 @@ CREATE TABLE IF NOT EXISTS pageencryption_permissions (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 
-ALTER TABLE pageencryption_permissions
+ALTER TABLE /*_*/pageencryption_asymmetric
   ADD PRIMARY KEY (`id`);
 
-ALTER TABLE pageencryption_permissions
+ALTER TABLE /*_*/pageencryption_asymmetric
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
 

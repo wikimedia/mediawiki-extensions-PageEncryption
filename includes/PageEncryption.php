@@ -32,28 +32,35 @@ use MediaWiki\Revision\RevisionStoreRecord;
 use MediaWiki\Revision\SlotRecord;
 
 class PageEncryption {
+
 	/** @var User */
 	public static $User;
+
 	/** @var userGroupManager */
 	public static $userGroupManager;
 
-	/** @var encryptedNamespace */
+	/** @var int */
 	public static $encryptedNamespace = 2246;
 
-	/** @var cookieUserKey */
+	/** @var string */
 	public static $cookieUserKey = 'pageencryption-userkey';
 
-	/** @var cachedMockUpRev */
+	/** @var array */
 	public static $cachedMockUpRev = [];
-	/** @const DecryptionFailed */
+
+	/** @const int */
 	public const DecryptionFailed = 1;
 
-	/** @const DecryptionFromAccessCode */
+	/** @const int */
 	public const DecryptionFromAccessCode = 2;
-	/** @const EncryptedPage */
+
+	/** @const int */
 	public const EncryptedPage = 3;
 
-	/** @var decryptionNotice */
+	/** @const int */
+	public const DecryptionFromPublicKey = 4;
+
+	/** @var int|null */
 	public static $decryptionNotice = null;
 
 	/**
@@ -72,21 +79,6 @@ class PageEncryption {
 			return self::$User;
 		}
 		return RequestContext::getMain()->getUser();
-	}
-
-	/**
-	 * @param string $password
-	 * @return string
-	 */
-	public static function saveProtectedKey( $password ) {
-		// @see https://github.com/defuse/php-encryption/blob/master/docs/Tutorial.md
-		$protected_key = KeyProtectedByPassword::createRandomPasswordProtectedKey( $password );
-		$protected_key_encoded = $protected_key->saveToAsciiSafeString();
-		$protected_key = KeyProtectedByPassword::loadFromAsciiSafeString( $protected_key_encoded );
-
-		// @todo save to database
-
-		return $protected_key;
 	}
 
 	/**
@@ -186,8 +178,8 @@ class PageEncryption {
 	 * @return string|bool
 	 */
 	public static function decryptFromAccessCodeSession( $pageId, $user_key ) {
-		$dbr = self::wfGetDB( DB_REPLICA );
-		$rows = $dbr->select( 'pageencryption_permissions', '*', [ 'page_id' => $pageId ] );
+		$dbr = self::getDB( DB_REPLICA );
+		$rows = $dbr->select( 'pageencryption_symmetric', '*', [ 'page_id' => $pageId ] );
 		foreach ( $rows as $row ) {
 			if ( empty( $row->viewed ) ) {
 				continue;
@@ -223,8 +215,8 @@ class PageEncryption {
 	 * @return string|bool
 	 */
 	public static function decryptFromAccessCode( $pageId, $password ) {
-		$dbr = self::wfGetDB( DB_MASTER );
-		$rows = $dbr->select( 'pageencryption_permissions', '*', [ 'page_id' => $pageId, 'viewed' => null ] );
+		$dbr = self::getDB( DB_MASTER );
+		$rows = $dbr->select( 'pageencryption_symmetric', '*', [ 'page_id' => $pageId, 'viewed' => null ] );
 		foreach ( $rows as $row ) {
 			$protected_key = KeyProtectedByPassword::loadFromAsciiSafeString( $row->protected_key );
 			try {
@@ -257,13 +249,62 @@ class PageEncryption {
 				'ip' => self::getIPAddress(),
 				'user_agent' => $_SERVER['HTTP_USER_AGENT']
 			] ) : null );
-			$res = $dbr->update( 'pageencryption_permissions', [
+			$res = $dbr->update( 'pageencryption_symmetric', [
 				'viewed' => $date,
 				'viewed_metadata' => $viewed_metadata
 				],
 				[ 'id' => $row->id ], __METHOD__ );
 			return $text;
 		}
+		return false;
+	}
+
+	/**
+	 * @param int $pageId
+	 * @param User $user
+	 * @return string|null|bool
+	 */
+	public static function decryptFromPublicKey( $pageId, $user ) {
+		$row_ = self::getEncryptionKeyRecord( $user->getId() );
+		if ( !$row_ ) {
+			return false;
+		}
+
+		$dbr = self::getDB( DB_MASTER );
+		$rows = $dbr->select( 'pageencryption_asymmetric', '*', [ 'page_id' => $pageId, 'recipient_id' => $user->getId() ] );
+
+		if ( !$rows->numRows() ) {
+			return false;
+		}
+
+		// *** solution 1
+		// $skpk = self::keyPairFromKey( $password );
+		$user_key = self::getUserKey();
+		$encrypted_private_key = $row_['encrypted_private_key'];
+		$recipient_secret_key = self::decryptSymmetric( $encrypted_private_key, $user_key );
+
+		foreach ( $rows as $row ) {
+			if ( !empty( $row->expiration_date ) && time() > strtotime( $row->expiration_date ) ) {
+				continue;
+			}
+
+			$user_ = User::newFromId( $row->created_by );
+			$sender_public_key = self::getPublicKey( $user_ );
+			$recipient_keypair = sodium_crypto_box_keypair_from_secretkey_and_publickey( $recipient_secret_key, $sender_public_key );
+
+			// Authenticate and decrypt message
+			$ret = sodium_crypto_box_open( $row->encrypted_content, $row->nonce, $recipient_keypair );
+
+			if ( $ret !== false ) {
+				$date = date( 'Y-m-d H:i:s' );
+				$res = $dbr->update( 'pageencryption_asymmetric', [
+					'viewed' => $date,
+					],
+					[ 'id' => $row->id ], __METHOD__ );
+				return $ret;
+			}
+		}
+
 		return false;
 	}
 
@@ -296,42 +337,63 @@ class PageEncryption {
 			return self::$cachedMockUpRev[$cacheKey] = $rev;
 		}
 
+		$user = self::getUser();
 		$text = $content->getText();
+		$ret = false;
 		$pageId = $title->getId();
-		if ( $rev->getUser()->getId() !== self::getUser()->getId() ) {
+		if ( $rev->getUser()->getId() !== $user->getId() ) {
 			$cookieKey = self::$cookieUserKey . '-acode-' . $pageId;
 			$context = RequestContext::getMain();
 			$request = $context->getRequest();
 			$user_key_encoded = $request->getCookie( $cookieKey );
+
 			if ( !empty( $user_key_encoded ) ) {
 				try {
 					$user_key = Key::loadFromAsciiSafeString( $user_key_encoded );
 				} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
 				}
-				$text = self::decryptFromAccessCodeSession( $pageId, $user_key );
-			} elseif ( !empty( $_GET['acode'] ) ) {
-				$text = self::decryptFromAccessCode( $pageId, $_GET['acode'] );
-			} else {
-				if ( $isSamePage ) {
-					self::$decryptionNotice = self::EncryptedPage;
-				}
-				return self::$cachedMockUpRev[$cacheKey] = $rev;
+				$ret = self::decryptFromAccessCodeSession( $pageId, $user_key );
 			}
-			if ( $text !== false ) {
+
+			if ( $ret === false && isset( $_GET['acode'] ) ) {
+				$ret = self::decryptFromAccessCode( $pageId, $_GET['acode'] );
+			}
+
+			if ( $ret !== false ) {
 				if ( $isSamePage ) {
 					self::$decryptionNotice = self::DecryptionFromAccessCode;
 				}
 			}
+
+			if ( $ret === false ) {
+				$ret = self::decryptFromPublicKey( $pageId, $user );
+
+				if ( $ret !== false ) {
+					if ( $isSamePage ) {
+						self::$decryptionNotice = self::DecryptionFromPublicKey;
+					}
+				}
+			}
+
+			if ( $ret === false ) {
+				if ( $isSamePage ) {
+					self::$decryptionNotice = self::EncryptedPage;
+				}
+
+				return self::$cachedMockUpRev[$cacheKey] = $rev;
+			}
+
 		} else {
 			$user_key = self::getUserKey();
 			if ( $user_key !== false ) {
-				$text = self::decryptSymmetric( $text, $user_key );
+				$ret = self::decryptSymmetric( $text, $user_key );
 			} else {
 				// throw new MWException( 'user-key not set' );
-				$text = false;
+				$ret = false;
 			}
 		}
-		if ( $text === false ) {
+
+		if ( $ret === false ) {
 			if ( $isSamePage ) {
 				self::$decryptionNotice = self::DecryptionFailed;
 			}
@@ -341,7 +403,7 @@ class PageEncryption {
 		$contentHandler = $content->getContentHandler();
 		$modelId = $contentHandler->getModelID();
 
-		$slotContent = ContentHandler::makeContent( $text, $title, $modelId );
+		$slotContent = ContentHandler::makeContent( $ret, $title, $modelId );
 
 		// >>>>>>>>>>>>>>>>>>>>>
 		// *** we cannot use simply the following:
@@ -451,20 +513,20 @@ class PageEncryption {
 	/**
 	 * @param User $user
 	 * @param Title $title
-	 * @param array $row
+	 * @param string $expiration_date
 	 * @param int|null $id
 	 * @return bool
 	 */
-	public static function setPermissions( $user, $title, $row, $id = null ) {
-		$dbr = self::wfGetDB( DB_MASTER );
+	public static function setPermissionsSymmetric( $user, $title, $expiration_date, $id = null ) {
+		$table = 'pageencryption_symmetric';
+		$row = [ 'expiration_date' => $expiration_date ];
+		$dbr = self::getDB( DB_MASTER );
+
 		if ( empty( $row['expiration_date'] ) ) {
 			$row['expiration_date'] = null;
 		}
 		$date = date( 'Y-m-d H:i:s' );
 		if ( !$id ) {
-			if ( empty( $row['access_type'] ) ) {
-				$row['access_type'] = 'symmetric';
-			}
 			$row['created_by'] = $user->getId();
 			$row['page_id'] = $title->getArticleId();
 			$wikiPage = self::getWikiPage( $title );
@@ -476,17 +538,6 @@ class PageEncryption {
 				throw new MWException( 'user-key not set' );
 			}
 
-			do {
-				$password = self::random_str( 5 );
-				$row['encrypted_password'] = self::encryptSymmetric( $password, $user_key );
-
-				$row_ = $dbr->selectRow(
-					'pageencryption_permissions',
-					'*',
-					[ 'page_id' => $row['page_id'], 'encrypted_password' => $row['encrypted_password'] ],
-					__METHOD__
-				);
-			} while ( $row_ !== false );
 			$contentHandler = $revisionRecord->getSlot( SlotRecord::MAIN )->getContent()->getContentHandler();
 			$modelId = $contentHandler->getModelID();
 
@@ -494,21 +545,93 @@ class PageEncryption {
 
 			// should be instance of text
 			$contentHandler = $content->getContentHandler();
-
 			$text = $content->getText();
+
+			do {
+				$password = self::random_str( 5 );
+				$row['encrypted_password'] = self::encryptSymmetric( $password, $user_key );
+
+				$row_ = $dbr->selectRow(
+					'pageencryption_symmetric',
+					'*',
+					[ 'page_id' => $row['page_id'], 'encrypted_password' => $row['encrypted_password'] ],
+					__METHOD__
+				);
+			} while ( $row_ !== false );
+
 			$protected_key = KeyProtectedByPassword::createRandomPasswordProtectedKey( $password );
 			$protected_key_encoded = $protected_key->saveToAsciiSafeString();
 			$user_key = $protected_key->unlockKey( $password );
 			$text = self::encryptSymmetric( $text, $user_key );
-
 			$row['protected_key'] = $protected_key_encoded;
 			$row['encrypted_content'] = $text;
-			$row['expiration_date'] = null;
 
-			$res = $dbr->insert( 'pageencryption_permissions', $row + [ 'updated_at' => $date, 'created_at' => $date ] );
+			$res = $dbr->insert( 'pageencryption_symmetric', $row + [ 'updated_at' => $date, 'created_at' => $date ] );
 		} else {
-			unset( $row['access_type'] );
-			$res = $dbr->update( 'pageencryption_permissions', $row, [ 'id' => $id ], __METHOD__ );
+			$res = $dbr->update( 'pageencryption_symmetric', $row, [ 'id' => $id ], __METHOD__ );
+		}
+		return $res;
+	}
+
+	/**
+	 * @param User $user
+	 * @param Title $title
+	 * @param User $recipient
+	 * @param string $public_key
+	 * @param string $expiration_date
+	 * @param int|null $id
+	 * @return bool
+	 */
+	public static function setPermissionsAsymmetric( $user, $title, $recipient, $public_key, $expiration_date, $id = null ) {
+		$row = [ 'expiration_date' => $expiration_date ];
+		$dbr = self::getDB( DB_MASTER );
+
+		if ( empty( $row['expiration_date'] ) ) {
+			$row['expiration_date'] = null;
+		}
+		$date = date( 'Y-m-d H:i:s' );
+		$row['recipient_id'] = $recipient->getId();
+
+		if ( !$id ) {
+			$row['created_by'] = $user->getId();
+			$row['page_id'] = $title->getArticleId();
+			$wikiPage = self::getWikiPage( $title );
+			$revisionRecord = $wikiPage->getRevisionRecord();
+			$row['revision_id'] = $revisionRecord->getId();
+			$user_key = self::getUserKey();
+
+			if ( $user_key === false ) {
+				throw new MWException( 'user-key not set' );
+			}
+
+			$contentHandler = $revisionRecord->getSlot( SlotRecord::MAIN )->getContent()->getContentHandler();
+			$modelId = $contentHandler->getModelID();
+
+			$content = $revisionRecord->getSlot( SlotRecord::MAIN )->getContent();
+
+			// should be instance of text
+			$contentHandler = $content->getContentHandler();
+			$text = $content->getText();
+
+			$nonce = \random_bytes( \SODIUM_CRYPTO_BOX_NONCEBYTES );
+			$row['nonce'] = $nonce;
+
+			$user_key = self::getUserKey();
+			$row_ = self::getEncryptionKeyRecord( $user->getId() );
+			$encrypted_private_key = $row_['encrypted_private_key'];
+			$sender_secret_key = self::decryptSymmetric( $encrypted_private_key, $user_key );
+
+			// @see https://php.watch/articles/modern-php-encryption-decryption-sodium
+			// Create enc/sign key pair
+			$sender_keypair = sodium_crypto_box_keypair_from_secretkey_and_publickey( $sender_secret_key, $public_key );
+
+			// Encrypt and sign the message
+			$text = sodium_crypto_box( $text, $nonce, $sender_keypair );
+			$row['encrypted_content'] = $text;
+
+			$res = $dbr->insert( 'pageencryption_asymmetric', $row + [ 'updated_at' => $date, 'created_at' => $date ] );
+		} else {
+			$res = $dbr->update( 'pageencryption_asymmetric', $row, [ 'id' => $id ], __METHOD__ );
 		}
 		return $res;
 	}
@@ -562,14 +685,32 @@ class PageEncryption {
 		$protected_key = KeyProtectedByPassword::createRandomPasswordProtectedKey( $password );
 		$protected_key_encoded = $protected_key->saveToAsciiSafeString();
 
+		// alternate solution: derive key-pair each time
+		// $skpk = self::keyPairFromKey( $password );
+
+		// https://php.watch/articles/modern-php-encryption-decryption-sodium
+		$keypair = sodium_crypto_box_keypair();
+		$secret_key = sodium_crypto_box_secretkey( $keypair );
+		$public_key = sodium_crypto_box_publickey( $keypair );
+
+		// $protected_key = KeyProtectedByPassword::loadFromAsciiSafeString( $protected_key_encoded );
+		$user_key = $protected_key->unlockKey( $password );
+		$encrypted_private_key = self::encryptSymmetric( $secret_key, $user_key );
+
 		$row = [
 			'user_id' => $user_id,
 			'protected_key' => $protected_key_encoded,
+			'public_key' => $public_key,
+			'encrypted_private_key' => $encrypted_private_key,
+
+			// alternate solution: derive key-pair each time
+			// @see https://security.stackexchange.com/questions/268242/feedback-wanted-regarding-my-functions-to-encrypt-decrypt-data-using-php-openss
+			// 'public_key' => sodium_crypto_box_publickey( $skpk )
 		];
 
 		$date = date( 'Y-m-d H:i:s' );
 
-		$dbr = self::wfGetDB( DB_MASTER );
+		$dbr = self::getDB( DB_MASTER );
 		$res = $dbr->insert( 'pageencryption_keys', $row + [ 'updated_at' => $date, 'created_at' => $date ] );
 
 		if ( !$res ) {
@@ -577,14 +718,59 @@ class PageEncryption {
 			return false;
 		}
 
-		$protected_key = KeyProtectedByPassword::loadFromAsciiSafeString( $protected_key_encoded );
-		$user_key = $protected_key->unlockKey( $password );
 		$user_key_encoded = $user_key->saveToAsciiSafeString();
 		$res = self::setCookie( $user_key_encoded );
 		if ( $res === false ) {
 			$message = wfMessage( 'pageencryption-error-message-cannot-set-cookie' )->text();
 		}
 		return $res;
+	}
+
+	/**
+	 * *** currently unused
+	 * @see https://security.stackexchange.com/questions/268242/feedback-wanted-regarding-my-functions-to-encrypt-decrypt-data-using-php-openss
+	 * @see https://gist.github.com/bcremer/858e4a3c279b276751335dc38fc162c5
+	 * @param string $secret_input
+	 * @return string
+	 */
+	public static function keyPairFromKey( $secret_input ) {
+		// the user's salt, unique per-user
+		$a2id_salt = random_bytes( SODIUM_CRYPTO_PWHASH_SALTBYTES );
+
+		// approx. 2-sec delay (~2020 cpu php7.4)
+		$a2id_ops = 4;
+
+		// 1gib
+		$a2id_membytes = 1024 * 1024 * 1024;
+
+		// if need be, adjust both downward until the delay is tolerable, but no faster than say ~250msec in 2023, ie.
+		// echo SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE.PHP_EOL;  # 2
+		// echo SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE.PHP_EOL;  # 67108864 (64mib)
+
+		// note $length is set long enough for two separate keys
+		// (you don't need to do this if not signing/ hashing anything)
+		$sk_signk_seeds = sodium_crypto_pwhash(
+			( SODIUM_CRYPTO_BOX_SEEDBYTES + SODIUM_CRYPTO_SIGN_SEEDBYTES ),
+
+			// string $password,
+			$secret_input,
+
+			// string $salt,
+			$a2id_salt,
+
+			// int $opslimit,
+			$a2id_ops,
+
+			// int $memlimit,
+			$a2id_membytes,
+
+			// int $algo
+			SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13
+		);
+
+		return sodium_crypto_box_seed_keypair(
+			substr( $sk_signk_seeds, 0, SODIUM_CRYPTO_BOX_SEEDBYTES )
+		);
 	}
 
 	/**
@@ -620,6 +806,22 @@ class PageEncryption {
 	}
 
 	/**
+	 * @param User $user
+	 * @return string|null
+	 */
+	public static function getPublicKey( $user ) {
+		$dbr = self::getDB( DB_REPLICA );
+		$ret = $dbr->selectField(
+			'pageencryption_keys',
+			'public_key',
+			[ 'user_id' => $user->getId() ],
+			__METHOD__,
+			[ 'LIMIT' => 1 ]
+		);
+		return !empty( $ret ) ? $ret : null;
+	}
+
+	/**
 	 * @param OutputPage $outputPage
 	 * @param Title $title
 	 * @param User $user
@@ -630,15 +832,22 @@ class PageEncryption {
 		// if ( $revisionRecord && $user->getId() !== $revisionRecord->getUser()->getId() ) {
 		// 	return;
 		// }
-		if ( $title->isKnown() && !self::isEditor( $title, $user ) ) {
-			return;
-		}
+
+		$isEditor = self::isEditor( $title, $user );
+		$public_key = self::getPublicKey( $user );
+
 		$outputPage->addJsConfigVars( [
 			// httpOnly cookies cannot be accessed client-side, so we
 			// set a specific variable
-			'pageencryption-user-is-editor' => true,
-			'pageencryption-userkey-cookie-isSet' => self::getUserKey() !== false,
-			'pageencryption-protected-key-isSet' => is_array( self::getEncryptionKeyRecord( $user->getId() ) ),
+			'pageencryption-config' => [
+				'isEncryptedNamespace' => self::isEncryptedNamespace( $title ),
+				'canHandleEncryption' => $user->isAllowed( 'pageencryption-can-handle-encryption' ),
+				'canManageEncryption' => $user->isAllowed( 'pageencryption-can-manage-encryption' ),
+				'isEditor' => $isEditor,
+				'publicKeyIsSet' => $public_key !== null,
+				'userkeyCookieIsSet' => self::getUserKey() !== false,
+				'protectedKeyIsSet' => is_array( self::getEncryptionKeyRecord( $user->getId() ) ),
+			]
 		] );
 	}
 
@@ -647,7 +856,7 @@ class PageEncryption {
 	 * @return array|null
 	 */
 	public static function getEncryptionKeyRecord( $userId ) {
-		$dbr = self::wfGetDB( DB_REPLICA );
+		$dbr = self::getDB( DB_REPLICA );
 		$row = $dbr->selectRow(
 			'pageencryption_keys',
 			'*',
@@ -662,7 +871,7 @@ class PageEncryption {
 	 * @return void
 	 */
 	public static function deleteEncryptionKey( $conds ) {
-		$dbw = self::wfGetDB( DB_PRIMARY );
+		$dbw = self::getDB( DB_PRIMARY );
 		$dbw->delete(
 			'pageencrption_keys', $conds,
 			__METHOD__
@@ -670,13 +879,14 @@ class PageEncryption {
 	}
 
 	/**
+	 * @param string $type
 	 * @param array $conds
 	 * @return void
 	 */
-	public static function deletePermissions( $conds ) {
-		$dbw = self::wfGetDB( DB_PRIMARY );
+	public static function deletePermissions( $type, $conds ) {
+		$dbw = self::getDB( DB_PRIMARY );
 		$dbw->delete(
-			'pageencryption_permissions', $conds,
+			"pageencryption_$type", $conds,
 			__METHOD__
 		);
 	}
@@ -704,10 +914,25 @@ class PageEncryption {
 
 	/**
 	 * @param Title $title
+	 * @return bool
+	 */
+	public static function isKnownArticle( $title ) {
+		// *** unfortunately we cannot always rely on $title->isContentPage()
+		// @see https://github.com/debtcompliance/EmailPage/pull/4#discussion_r1191646022
+		// or use $title->exists()
+		return ( $title && $title->canExist() && $title->getArticleID() > 0
+			&& $title->isKnown() );
+	}
+
+	/**
+	 * @param Title $title
 	 * @param User|null $user
 	 * @return bool
 	 */
 	public static function isEditor( $title, $user = null ) {
+		if ( !self::isKnownArticle( $title ) ) {
+			return false;
+		}
 		if ( !$user ) {
 			$user = self::getUser();
 		}
@@ -795,9 +1020,10 @@ class PageEncryption {
 	 * @param int $db
 	 * @return \Wikimedia\Rdbms\DBConnRef
 	 */
-	public static function wfGetDB( $db ) {
+	public static function getDB( $db ) {
 		if ( !method_exists( MediaWikiServices::class, 'getConnectionProvider' ) ) {
-			return wfGetDB( $db );
+			// @see https://gerrit.wikimedia.org/r/c/mediawiki/extensions/PageEncryption/+/1038754/comment/4ccfc553_58a41db8/
+			return MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( $db );
 		}
 		$connectionProvider = MediaWikiServices::getInstance()->getConnectionProvider();
 		switch ( $db ) {
