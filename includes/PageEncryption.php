@@ -280,6 +280,11 @@ class PageEncryption {
 		// *** solution 1
 		// $skpk = self::keyPairFromKey( $password );
 		$user_key = self::getUserKey();
+
+		if ( $user_key === false ) {
+			return false;
+		}
+
 		$encrypted_private_key = $row_['encrypted_private_key'];
 		$recipient_secret_key = self::decryptSymmetric( $encrypted_private_key, $user_key );
 
