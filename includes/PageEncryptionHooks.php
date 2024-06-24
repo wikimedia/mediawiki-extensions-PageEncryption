@@ -375,24 +375,17 @@ class PageEncryptionHooks {
 	}
 
 	/**
-	 * @param Parser $parser
+	 * @param OutputPage $outputPage
 	 * @param string &$text
 	 * @return void
 	 */
-	public static function onParserAfterTidy( Parser $parser, &$text ) {
-		// if ( method_exists( RevisionStore::class, 'getPage' ) ) {
-		$title = $parser->getTitle();
+	public static function onOutputPageBeforeHTML( OutputPage $outputPage, &$text ) {
+		$title = $outputPage->getTitle();
 		if ( !\PageEncryption::isEncryptedNamespace( $title ) ) {
-			return;
-		}
-		$revisionRecord = $parser->getRevisionRecordObject();
-
-		if ( !$revisionRecord ) {
 			return;
 		}
 
 		switch ( \PageEncryption::$decryptionNotice ) {
-
 			case \PageEncryption::EncryptedPage:
 				$text = '<div class="pageencryption-notice">' . wfMessage( 'pageencryption-sitenotice-encrypted-page' )->plain() . '</div>';
 				break;
