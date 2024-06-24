@@ -405,7 +405,8 @@ $( function () {
 	}
 
 	// && Config.isEditor
-	if ( Config.isEncryptedNamespace && Config.canManageEncryption &&
+	if ( Config.isEncryptedNamespace &&
+		( Config.canHandleEncryption || Config.canManageEncryption ) &&
 		( !Config.protectedKeyIsSet || !Config.userkeyCookieIsSet )
 	) {
 		openDialog();
