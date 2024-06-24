@@ -28,7 +28,7 @@
 	"Hooks": {
 		"BeforeInitialize": "PageEncryptionHooks::onBeforeInitialize",
 		"AlternateEdit": "PageEncryptionHooks::onAlternateEdit",
-		"ParserAfterTidy": "PageEncryptionHooks::onParserAfterTidy",
+		"OutputPageBeforeHTML": "PageEncryptionHooks::onOutputPageBeforeHTML",
 		"getUserPermissionsErrors": "PageEncryptionHooks::onGetUserPermissionsErrors",
 		"MediaWikiServices": "PageEncryptionHooks::onMediaWikiServices",
 		"MultiContentSave": "PageEncryptionHooks::onMultiContentSave",
