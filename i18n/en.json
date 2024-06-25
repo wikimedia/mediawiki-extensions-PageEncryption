@@ -12,6 +12,9 @@
 	"right-pageencryption-can-handle-encryption": "can handle encryption",
 	"action-pageencryption-can-handle-encryption": "handle encryption",
 
+	"group-pageencryption-admin": "PageEncryption admin",
+	"group-pageencryption-recipient": "PageEncryption editor",
+
 	"pageencryptionpermissions": "Manage access",
 	"pageencryption-jsmodule-outdated-version": "This version of PageEncryption is outdated. <a href=\"https://www.mediawiki.org/wiki/Special:ExtensionDistributor/PageEncryption\">Update</a>",
 
