@@ -201,19 +201,6 @@ class PageEncryptionHooks {
 	}
 
 	/**
-	 * @param OutputPage $out
-	 * @param ParserOutput $parserOutput
-	 * @return void
-	 */
-	public static function onOutputPageParserOutput( OutputPage $out, ParserOutput $parserOutput ) {
-		$title = $out->getTitle();
-
-		if ( \PageEncryption::isEncryptedNamespace( $title ) ) {
-			$parserOutput->addWrapperDivClass( 'pageencryption-encryption-namespace' );
-		}
-	}
-
-	/**
 	 * @param Title $title
 	 * @param User $user
 	 * @param string $action
@@ -299,6 +286,57 @@ class PageEncryptionHooks {
 
 		$slots = $revisionRecord->getSlots();
 		$slots->setContent( MediaWiki\Revision\SlotRecord::MAIN, $slotContent );
+	}
+
+	/**
+	 * @param OutputPage $out
+	 * @param ParserOutput $parserOutput
+	 * @return void
+	 */
+	public static function onOutputPageParserOutput( OutputPage $out, ParserOutput $parserOutput ) {
+		$title = $out->getTitle();
+
+		if ( \PageEncryption::isEncryptedNamespace( $title ) ) {
+			if ( method_exists( $out, 'disableClientCache' ) ) {
+				// MW 1.38+
+				$out->disableClientCache();
+			} else {
+				$out->enableClientCache( false );
+			}
+
+			$parserOutput->addWrapperDivClass( 'pageencryption-encryption-namespace' );
+		}
+	}
+
+	/**
+	 * @param Content $content
+	 * @param Title $title
+	 * @param int $revId
+	 * @param ParserOptions $options
+	 * @param bool $generateHtml
+	 * @param ParserOutput &$parserOutput
+	 * @return void
+	 */
+	public static function onContentGetParserOutput( $content, $title, $revId, $options, $generateHtml, &$parserOutput ) {
+		if ( \PageEncryption::isEncryptedNamespace( $title ) ) {
+			// @see https://matrix.to/#/!NGZmJSwAAwbGRxhWwH:matrix.org/$_tv5PXROs5-J91qHYxA6dZT5mie5Tjx9-idKT_HCrzY?via=matrix.org&via=matrix.jembawan.com&via=gemeinsam.jetzt
+			$parserOutput->updateCacheExpiry( 0 );
+		}
+	}
+
+	/**
+	 * @param ParserCache $parserCache
+	 * @param ParserOutput $parserOutput
+	 * @param Title $title
+	 * @param ParserOptions $parserOptions
+	 * @param int $revId
+	 * @return void
+	 */
+	public static function onParserCacheSaveComplete( $parserCache, $parserOutput, $title, $parserOptions, $revId ) {
+		// *** for debug purpose
+		if ( \PageEncryption::isEncryptedNamespace( $title ) ) {
+			// echo 'onParserCacheSaveComplete';
+		}
 	}
 
 	/**
