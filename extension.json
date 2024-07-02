@@ -33,6 +33,8 @@
 		"MediaWikiServices": "PageEncryptionHooks::onMediaWikiServices",
 		"MultiContentSave": "PageEncryptionHooks::onMultiContentSave",
 		"RejectParserCacheValue": "PageEncryptionHooks::onRejectParserCacheValue",
+		"ParserCacheSaveComplete": "PageEncryptionHooks::onParserCacheSaveComplete",
+		"ContentGetParserOutput": "PageEncryptionHooks::onContentGetParserOutput",
 		"SiteNoticeBefore": "PageEncryptionHooks::onSiteNoticeBefore",
 		"LoadExtensionSchemaUpdates": "PageEncryptionHooks::onLoadExtensionSchemaUpdates",
 		"BeforePageDisplay": "PageEncryptionHooks::onBeforePageDisplay",
