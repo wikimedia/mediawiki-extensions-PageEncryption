@@ -19,7 +19,7 @@
  * @copyright Copyright ©2023, https://wikisphere.org
  */
 
-$( function () {
+$( () => {
 	$( '.pageencryption-managepermissions-pager-button-show-url' ).on(
 		'click',
 
@@ -63,7 +63,7 @@ $( function () {
 				$( this )
 					.closest( 'form' )
 					.find( ':input' )
-					.each( function ( i, el ) {
+					.each( ( i, el ) => {
 						$( el ).removeAttr( 'required' );
 					} );
 			}
@@ -75,12 +75,12 @@ $( function () {
 		canManagePermissions &&
 		!mw.cookie.get( 'pageencryption-check-latest-version' )
 	) {
-		mw.loader.using( 'mediawiki.api', function () {
+		mw.loader.using( 'mediawiki.api', () => {
 			new mw.Api()
 				.postWithToken( 'csrf', {
 					action: 'pageencryption-check-latest-version'
 				} )
-				.done( function ( res ) {
+				.done( ( res ) => {
 					if ( 'pageencryption-check-latest-version' in res ) {
 						if ( res[ 'pageencryption-check-latest-version' ].result === 2 ) {
 							var messageWidget = new OO.ui.MessageWidget( {

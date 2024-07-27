@@ -19,7 +19,7 @@
  * @copyright Copyright ©2023-2024, https://wikisphere.org
  */
 
-$( function () {
+$( () => {
 	var WindowManager;
 	var DialogName = 'Dialog';
 	var Model = {};
@@ -116,7 +116,7 @@ $( function () {
 			classes: [ 'pageencryption-button-goback' ]
 		} );
 
-		buttonGoBack.on( 'click', function () {
+		buttonGoBack.on( 'click', () => {
 			Booklet.setPage( 'two' );
 
 			// MessageWidget resides on page one
@@ -154,7 +154,7 @@ $( function () {
 			classes: [ 'pageencryption-button-lost-password' ]
 		} );
 
-		buttonLostPassword.on( 'click', function () {
+		buttonLostPassword.on( 'click', () => {
 			Booklet.setPage( 'one' );
 			MessageWidget.setType( 'error' );
 			MessageWidget.setLabel( messageButton() );
@@ -291,7 +291,7 @@ $( function () {
 		// https://www.mediawiki.org/wiki/OOUI/Windows/Process_Dialogs#Action_sets
 		return ProcessDialog.super.prototype.getActionProcess
 			.call( this, action )
-			.first( function () {
+			.first( () => {
 				switch ( action ) {
 					case 'save':
 
@@ -302,7 +302,7 @@ $( function () {
 
 							new mw.Api()
 								.postWithToken( 'csrf', postData )
-								.done( function ( res ) {
+								.done( ( res ) => {
 									// console.log("res", res);
 									if ( !( payload.action in res ) ) {
 										reject(
@@ -332,7 +332,7 @@ $( function () {
 
 									// resolve();
 								} )
-								.fail( function ( res ) {
+								.fail( ( res ) => {
 									console.log( 'res', res );
 									var msg = res;
 									// https://doc.wikimedia.org/oojs-ui/master/js/source/Error.html#OO-ui-Error-method-constructor
@@ -343,7 +343,7 @@ $( function () {
 						};
 
 						return new Promise( ( resolve, reject ) => {
-							mw.loader.using( 'mediawiki.api', function () {
+							mw.loader.using( 'mediawiki.api', () => {
 								callApi( payload, resolve, reject );
 							} );
 						} ); // promise
@@ -351,7 +351,7 @@ $( function () {
 				// return false;
 			}, this ); // .next
 
-		return new OO.ui.Process( function () {
+		return new OO.ui.Process( () => {
 			dialog.close( { action: action } );
 		} );
 
