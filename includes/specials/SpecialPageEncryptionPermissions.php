@@ -132,7 +132,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		// $out->addWikiMsg( 'pageencryption-managepermissions-description-' . ( $this->title ? 'specific' : 'generic' ),
 		// 	!$this->title || !$user->isAllowed( 'pageencryption-canmanagepermissions' ) ? '' : $this->msg( 'pageencryption-managepermissions-description-manage-all-permissions' )->text() );
 
-		$out->addWikiMsg( 'pageencryption-managepermissions-form-preamble' );
+		$out->addWikiMsg( 'pageencryption-managepermissions-form-preamble' . ( !$par ? '-site' : '' ) );
 
 		$out->addHTML( '<br />' );
 		$layout = new OOUI\PanelLayout( [ 'id' => 'pageencryption-panel-layout', 'expanded' => false, 'padded' => false, 'framed' => false ] );
@@ -257,8 +257,6 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 			$this->localTitle->getFullText()
 		);
 
-		$out->addWikiMsg( 'pageencryption-managepermissions-form-preamble' );
-
 		$htmlForm->prepareForm();
 
 		$result = $htmlForm->tryAuthorizedSubmit();
@@ -320,6 +318,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 				'type' => 'title',
 				'name' => 'page',
 				'exists' => true,
+				'namespace' => NS_PAGEENCRYPTION,
 				'required' => true,
 				'section' => $section_prefix . 'form-fieldset-permissions-main-symmetric',
 				'help-message' => 'pageencryption-managepermissions-form-page-help'
@@ -356,8 +355,9 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 				'label-message' => 'pageencryption-managepermissions-form-page-label',
 				'type' => 'title',
 				'name' => 'page',
+				'namespace' => NS_PAGEENCRYPTION,
 				'required' => true,
-				'section' => $section_prefix . 'form-fieldset-permissions-main-symmetric',
+				'section' => $section_prefix . 'form-fieldset-permissions-main-public-key',
 				'help-message' => 'pageencryption-managepermissions-form-page-help'
 			];
 		}
@@ -493,6 +493,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 			'label-message' => 'pageencryption-managepermissions-form-search-page-label',
 			'type' => 'title',
 			'name' => 'page',
+			'namespace' => NS_PAGEENCRYPTION,
 			'exists' => true,
 			'required' => false,
 			'default' => ( !empty( $page ) ? $page : null ),

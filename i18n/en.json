@@ -38,6 +38,8 @@
 
 	"pageencryption-managepermissions-form-user-label": "user",
 	"pageencryption-managepermissions-form-preamble": "Here you can grant access to this document based on a disposable symmetric key or the recipient public key (if any). A disposable symmetric key can be used only once and it won't be saved on the server. The current revision will be encrypted using the preferred method and the authorized user will be able to access uniquely the current encrypted revision.",
+	"pageencryption-managepermissions-form-preamble-site": "Here you can grant access to documents in the \"Encrypted\" namespace based on a disposable symmetric key or the recipient public key (if any). A disposable symmetric key can be used only once and it won't be saved on the server. The current revision will be encrypted using the preferred method and the authorized user will be able to access uniquely the current encrypted revision.",
+
 	"pageencryption-managepermissions-form-fieldset-permissions-main-symmetric": "Create access key",
 	"pageencryption-managepermissions-form-fieldset-permissions-main-public-key": "Encrypt by recipient public key",
 	"pageencryption-managepermissions-form-scope-label": "Key",
