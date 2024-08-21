@@ -44,30 +44,35 @@ class PageEncryptionHooks {
 	public static function onLoadExtensionSchemaUpdates( DatabaseUpdater $updater = null ) {
 		$base = __DIR__;
 		$dbType = $updater->getDB()->getType();
-		$array = [
-			[
-				'table' => 'pageencryption_symmetric',
-				'filename' => '../' . $dbType . '/pageencryption_symmetric.sql'
-			],
-			[
-				'table' => 'pageencryption_asymmetric',
-				'filename' => '../' . $dbType . '/pageencryption_asymmetric.sql'
-			],
-			[
-				'table' => 'pageencryption_keys',
-				'filename' => '../' . $dbType . '/pageencryption_keys.sql'
-			]
+		$tables = [
+			'pageencryption_symmetric',
+			'pageencryption_asymmetric',
+			'pageencryption_keys',
 		];
-		foreach ( $array as $value ) {
-			if ( file_exists( $base . '/' . $value['filename'] ) ) {
+		foreach ( $tables as $value ) {
+			if ( file_exists( "$base/../$dbType/$value.sql" ) ) {
 				$updater->addExtensionUpdate(
 					[
-						'addTable', $value['table'],
-						$base . '/' . $value['filename'], true
+						'addTable',
+						$value,
+						"$base/../$dbType/$value.sql",
+						true
 					]
 				);
 			}
 		}
+
+		$updater->addExtensionField(
+			'pageencryption_keys',
+			'public_key',
+			"$base/../$dbType/pageencryption_keys_public_key.sql"
+		);
+
+		$updater->addExtensionField(
+			'pageencryption_keys',
+			'encrypted_private_key',
+			"$base/../$dbType/pageencryption_keys_encrypted_private_key.sql"
+		);
 	}
 
 	/**
@@ -75,13 +80,8 @@ class PageEncryptionHooks {
 	 * @return void
 	 */
 	public static function onMediaWikiServices( $services ) {
-		if ( defined( 'MW_PHPUNIT_TEST' ) ) {
-			return;
-		}
-
-		// *** this prevents the error "Cannot replace an active service: DBLoadBalancer"
-		// caused by MediaWikiServices::getInstance()->disableStorage();
-		if ( basename( $_SERVER['SCRIPT_FILENAME'], '.php' ) === 'run' ) {
+		// ignore on maintenance scripts
+		if ( defined( 'MW_ENTRY_POINT' ) && MW_ENTRY_POINT === 'cli' ) {
 			return;
 		}
 
