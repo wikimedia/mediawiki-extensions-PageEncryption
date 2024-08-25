@@ -215,7 +215,7 @@ class PageEncryption {
 	 * @return string|bool
 	 */
 	public static function decryptFromAccessCode( $pageId, $password ) {
-		$dbr = self::getDB( DB_MASTER );
+		$dbr = self::getDB( DB_PRIMARY );
 		$rows = $dbr->select( 'pageencryption_symmetric', '*', [ 'page_id' => $pageId, 'viewed' => null ] );
 		foreach ( $rows as $row ) {
 			$protected_key = KeyProtectedByPassword::loadFromAsciiSafeString( $row->protected_key );
@@ -270,7 +270,7 @@ class PageEncryption {
 			return false;
 		}
 
-		$dbr = self::getDB( DB_MASTER );
+		$dbr = self::getDB( DB_PRIMARY );
 		$rows = $dbr->select( 'pageencryption_asymmetric', '*', [ 'page_id' => $pageId, 'recipient_id' => $user->getId() ] );
 
 		if ( !$rows->numRows() ) {
@@ -525,7 +525,7 @@ class PageEncryption {
 	public static function setPermissionsSymmetric( $user, $title, $expiration_date, $id = null ) {
 		$table = 'pageencryption_symmetric';
 		$row = [ 'expiration_date' => $expiration_date ];
-		$dbr = self::getDB( DB_MASTER );
+		$dbr = self::getDB( DB_PRIMARY );
 
 		if ( empty( $row['expiration_date'] ) ) {
 			$row['expiration_date'] = null;
@@ -589,7 +589,7 @@ class PageEncryption {
 	 */
 	public static function setPermissionsAsymmetric( $user, $title, $recipient, $public_key, $expiration_date, $id = null ) {
 		$row = [ 'expiration_date' => $expiration_date ];
-		$dbr = self::getDB( DB_MASTER );
+		$dbr = self::getDB( DB_PRIMARY );
 
 		if ( empty( $row['expiration_date'] ) ) {
 			$row['expiration_date'] = null;
@@ -715,7 +715,7 @@ class PageEncryption {
 
 		$date = date( 'Y-m-d H:i:s' );
 
-		$dbr = self::getDB( DB_MASTER );
+		$dbr = self::getDB( DB_PRIMARY );
 		$res = $dbr->insert( 'pageencryption_keys', $row + [ 'updated_at' => $date, 'created_at' => $date ] );
 
 		if ( !$res ) {
@@ -1033,7 +1033,6 @@ class PageEncryption {
 		$connectionProvider = MediaWikiServices::getInstance()->getConnectionProvider();
 		switch ( $db ) {
 			case DB_PRIMARY:
-			case DB_MASTER:
 				return $connectionProvider->getPrimaryDatabase();
 			case DB_REPLICA:
 			default:

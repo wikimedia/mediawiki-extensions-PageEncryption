@@ -194,7 +194,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		$type = $request->getVal( 'type' );
 		$new = ( $id && $id === 'new' );
 
-		$dbr = \PageEncryption::getDB( DB_MASTER );
+		$dbr = \PageEncryption::getDB( DB_PRIMARY );
 
 		if ( !empty( $action ) ) {
 
@@ -409,7 +409,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 	 */
 	public function onSubmit( $data, $htmlForm ) {
 		$request = $this->getRequest();
-		$dbr = \PageEncryption::getDB( DB_MASTER );
+		$dbr = \PageEncryption::getDB( DB_PRIMARY );
 		$id = $request->getVal( 'edit' );
 		$new = ( $id && $id === 'new' );
 		$title = ( array_key_exists( 'page', $data ) ? $title = Title::newFromText( $data['page'] )
