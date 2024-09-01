@@ -820,7 +820,7 @@ class PageEncryption {
 		$ret = $dbr->selectField(
 			'pageencryption_keys',
 			'public_key',
-			[ 'user_id' => $user->getId() ],
+			[ 'user_id' => $user->getId(), 'enabled' => 1 ],
 			__METHOD__,
 			[ 'LIMIT' => 1 ]
 		);
