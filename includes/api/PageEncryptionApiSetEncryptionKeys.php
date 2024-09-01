@@ -28,7 +28,7 @@ class PageEncryptionApiSetEncryptionKeys extends ApiBase {
 	 * @inheritDoc
 	 */
 	public function isWriteMode() {
-		return false;
+		return true;
 	}
 
 	/**
@@ -60,20 +60,20 @@ class PageEncryptionApiSetEncryptionKeys extends ApiBase {
 				$message = null;
 				$res = \PageEncryption::setUserKey( $row['protected_key'], $params['password'], $message );
 				// close dialog or ask password again
-				$result->addValue( [ $this->getModuleName() ], 'action', 'enter-password' );
+				$result->addValue( [ $this->getModuleName() ], 'action', 'enter-password', ApiResult::OVERRIDE );
 				$result->addValue( [ $this->getModuleName() ], 'message', $message );
 				return;
 			}
 
-			$result->addValue( [ $this->getModuleName() ], 'action', 'reset-key' );
-			\PageEncryption::disableEncryptionKeyRecord( $row['id'] );
+			// $result->addValue( [ $this->getModuleName() ], 'action', 'reset-key' );
+			\PageEncryption::disableEncryptionKeyRecord( $row );
 		}
 
 		$message = null;
 		$protected_key_encoded = null;
 		$res = \PageEncryption::setEncryptionKey( $user->getId(), $params['password'], $message, $protected_key_encoded );
 
-		$result->addValue( [ $this->getModuleName() ], 'action', 'new-record' );
+		$result->addValue( [ $this->getModuleName() ], 'action', 'new-record', ApiResult::OVERRIDE );
 		$result->addValue( [ $this->getModuleName() ], 'message', $message );
 
 		// return the resulting protected key, for backup purpose,

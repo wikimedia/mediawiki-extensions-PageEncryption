@@ -221,8 +221,9 @@ $( function () {
 			return ProcessDialog.super.prototype.getActionProcess.call( this, action );
 		}
 
-		// or use Booklet.getCurrentPage().name
-		if ( !Config.protectedKeyIsSet ) {
+		var setKey = ( Booklet.getCurrentPage().name === 'one' );
+
+		if ( setKey ) {
 			var password = Model.passwordInput.getValue();
 			var passwordConfirm = Model.passwordConfirmationInput.getValue();
 
@@ -284,7 +285,7 @@ $( function () {
 		var payload = {
 			action: 'pageencryption-set-encryption-keys',
 			password: password,
-			'reset-key': Booklet.getCurrentPage().name === 'one' ? 1 : 0
+			'reset-key': Number( setKey )
 		};
 
 		// https://www.mediawiki.org/wiki/OOUI/Windows/Process_Dialogs#Action_sets

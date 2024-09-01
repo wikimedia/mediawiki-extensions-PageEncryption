@@ -671,7 +671,8 @@ class PageEncryption {
 	 * @return bool
 	 */
 	public static function disableEncryptionKeyRecord( $row ) {
-		return $dbr->update(
+		$dbw = self::getDB( DB_PRIMARY );
+		return $dbw->update(
 			'pageencryption_keys',
 			[ 'enabled' => 0 ],
 			[ 'id' => $row['id'] ],
