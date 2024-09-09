@@ -363,7 +363,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		}
 
 		if ( !empty( $row['recipient_id'] ) ) {
-			$user_ = User::newFromId( $row['recipient_id'] );
+			$user_ = MediaWikiServices::getInstance()->getUserFactory()->newFromId( $row['recipient_id'] );
 			$username = $user_->getName();
 		} else {
 			$username = null;

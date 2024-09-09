@@ -288,12 +288,13 @@ class PageEncryption {
 		$encrypted_private_key = $row_['encrypted_private_key'];
 		$recipient_secret_key = self::decryptSymmetric( $encrypted_private_key, $user_key );
 
+		$userFactory = MediaWikiServices::getInstance()->getUserFactory();
 		foreach ( $rows as $row ) {
 			if ( !empty( $row->expiration_date ) && time() > strtotime( $row->expiration_date ) ) {
 				continue;
 			}
 
-			$user_ = User::newFromId( $row->created_by );
+			$user_ = $userFactory->newFromId( $row->created_by );
 			$sender_public_key = self::getPublicKey( $user_ );
 			$recipient_keypair = sodium_crypto_box_keypair_from_secretkey_and_publickey( $recipient_secret_key, $sender_public_key );
 

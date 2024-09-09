@@ -104,13 +104,13 @@ class PageEncryptionPermissionsPager extends TablePager {
 		$formatted = '';
 		switch ( $field ) {
 			case 'created_by':
-				$user = User::newFromId( $row->created_by );
+				$user = MediaWikiServices::getInstance()->getUserFactory()->newFromId( $row->created_by );
 				$formatted = $user->getName();
 				break;
 
 			case 'recipient_id':
 				if ( $row->access_type === 'asymmetric' ) {
-					$user = User::newFromId( $row->recipient_id );
+					$user = MediaWikiServices::getInstance()->getUserFactory()->newFromId( $row->recipient_id );
 					$formatted = $user->getName();
 				} else {
 					$formatted = 'n/a';
