@@ -28,7 +28,7 @@
 }
 
 .pageencryption-managepermissions-pager-button-show-password,
- .pageencryption-managepermissions-pager-button-show-url {
+.pageencryption-managepermissions-pager-button-show-url {
 	background: #dcdcdc;
 	padding: 6px;
 	border: 1px solid #ccc;
@@ -61,9 +61,9 @@
 }
 
 .pageencryption-encryption-namespace {
-   -moz-user-select: -moz-none;
-   -khtml-user-select: none;
-   -webkit-user-select: none;
-   -ms-user-select: none;
-   user-select: none;
+	-moz-user-select: -moz-none;
+	-khtml-user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
 }
