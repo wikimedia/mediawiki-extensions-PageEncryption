@@ -19,7 +19,7 @@
  * @copyright Copyright ©2023-2024, https://wikisphere.org
  */
 
-$( () => {
+$( function () {
 	var WindowManager;
 	var DialogName = 'Dialog';
 	var Model = {};
@@ -116,7 +116,7 @@ $( () => {
 			classes: [ 'pageencryption-button-goback' ]
 		} );
 
-		buttonGoBack.on( 'click', () => {
+		buttonGoBack.on( 'click', function () {
 			Booklet.setPage( 'two' );
 
 			// MessageWidget resides on page one
@@ -154,7 +154,7 @@ $( () => {
 			classes: [ 'pageencryption-button-lost-password' ]
 		} );
 
-		buttonLostPassword.on( 'click', () => {
+		buttonLostPassword.on( 'click', function () {
 			Booklet.setPage( 'one' );
 			MessageWidget.setType( 'error' );
 			MessageWidget.setLabel( messageButton() );
@@ -228,7 +228,7 @@ $( () => {
 			var passwordConfirm = Model.passwordConfirmationInput.getValue();
 
 			if ( password !== passwordConfirm ) {
-				console.log( password + ',' + passwordConfirm );
+				// console.log( password + ',' + passwordConfirm );
 
 				PasswordInputField.setErrors( [] );
 
@@ -291,7 +291,7 @@ $( () => {
 		// https://www.mediawiki.org/wiki/OOUI/Windows/Process_Dialogs#Action_sets
 		return ProcessDialog.super.prototype.getActionProcess
 			.call( this, action )
-			.first( () => {
+			.first( function () {
 				switch ( action ) {
 					case 'save':
 
@@ -302,7 +302,7 @@ $( () => {
 
 							new mw.Api()
 								.postWithToken( 'csrf', postData )
-								.done( ( res ) => {
+								.done( function ( res ) {
 									// console.log("res", res);
 									if ( !( payload.action in res ) ) {
 										reject(
@@ -332,8 +332,8 @@ $( () => {
 
 									// resolve();
 								} )
-								.fail( ( res ) => {
-									console.log( 'res', res );
+								.fail( function ( res ) {
+									console.error( 'res', res );
 									var msg = res;
 									// https://doc.wikimedia.org/oojs-ui/master/js/source/Error.html#OO-ui-Error-method-constructor
 									reject(
@@ -343,7 +343,7 @@ $( () => {
 						};
 
 						return new Promise( ( resolve, reject ) => {
-							mw.loader.using( 'mediawiki.api', () => {
+							mw.loader.using( 'mediawiki.api', function () {
 								callApi( payload, resolve, reject );
 							} );
 						} ); // promise
@@ -351,7 +351,7 @@ $( () => {
 				// return false;
 			}, this ); // .next
 
-		return new OO.ui.Process( () => {
+		return new OO.ui.Process( function () {
 			dialog.close( { action: action } );
 		} );
 

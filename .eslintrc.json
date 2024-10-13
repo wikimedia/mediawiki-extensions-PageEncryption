@@ -21,6 +21,11 @@
 		"no-unreachable": "warn",
 		"no-unused-expressions": "warn",
 		"no-alert": "warn",
-		"compat/compat": "warn"
+		"compat/compat": "warn",
+		"es-x/no-async-functions": "off",
+		"arrow-body-style": "off",
+		"implicit-arrow-linebreak": "off",
+		"no-jquery/no-extend": "off",
+		"prefer-arrow-callback": "off"
 	}
 }

@@ -22,7 +22,7 @@
 
 // @credits https://github.com/briannippert/Password-Validator/blob/master/PasswordValidatorv2.js
 const PageEncryptionPasswordValidator = function ( conf ) {
-	var conf = Object.assign(
+	var conf = $.extend(
 		{
 			minSize: 5,
 			maxSize: 15,

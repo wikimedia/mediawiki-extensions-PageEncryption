@@ -318,6 +318,8 @@ class PageEncryption {
 	 * @return mixed
 	 */
 	public static function mockUpRevision( $rev ) {
+		$cacheKey = $rev->getId();
+
 		// *** prevents error "Sessions are disabled for load entry point"
 		try {
 			self::getUser()->getId();
@@ -331,7 +333,6 @@ class PageEncryption {
 			$title = $rev->getPageAsLinkTarget();
 		}
 		$isSamePage = ( RequestContext::getMain()->getTitle() === $title );
-		$cacheKey = $rev->getId();
 		if ( array_key_exists( $cacheKey, self::$cachedMockUpRev ) ) {
 			return self::$cachedMockUpRev[$cacheKey];
 		}
