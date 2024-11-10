@@ -6,6 +6,7 @@
 		<exclude name="Generic.NamingConventions.UpperCaseConstantName.ClassConstantNotUpperCase" />
 		<exclude name="MediaWiki.NamingConventions.LowerCamelFunctionsName.FunctionName" />
 		<exclude name="MediaWiki.Usage.AssignmentInReturn.AssignmentInReturn" />
+		<exclude name="MediaWiki.Usage.NullableType.ExplicitNullableTypes" />
 		<exclude name="MediaWiki.Usage.SuperGlobalsUsage.SuperGlobals" />
 		<exclude name="MediaWiki.WhiteSpace.SpaceBeforeSingleLineComment.NewLineComment" />
 	</rule>
