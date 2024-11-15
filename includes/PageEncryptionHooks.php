@@ -41,7 +41,7 @@ class PageEncryptionHooks {
 	 * @param DatabaseUpdater|null $updater
 	 * @return void
 	 */
-	public static function onLoadExtensionSchemaUpdates( DatabaseUpdater $updater = null ) {
+	public static function onLoadExtensionSchemaUpdates( ?DatabaseUpdater $updater = null ) {
 		$base = __DIR__;
 		$dbType = $updater->getDB()->getType();
 		$tables = [
