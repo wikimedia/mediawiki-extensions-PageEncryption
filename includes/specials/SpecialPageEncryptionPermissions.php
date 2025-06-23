@@ -25,6 +25,7 @@
 require_once __DIR__ . '/PageEncryptionPermissionsPager.php';
 
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 
 /**
  * A special page that lists protected pages

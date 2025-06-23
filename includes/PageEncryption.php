@@ -20,16 +20,17 @@
  * @author thomas-topway-it <support@topway.it>
  * @copyright Copyright ©2023-2024, https://wikisphere.org
  */
+
 use Defuse\Crypto\Crypto;
 use Defuse\Crypto\Key;
 use Defuse\Crypto\KeyProtectedByPassword;
 use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
-// use MediaWiki\Revision\MutableRevisionRecord;
 use MediaWiki\Revision\MutableRevisionSlots;
 use MediaWiki\Revision\RevisionStore;
 use MediaWiki\Revision\RevisionStoreRecord;
 use MediaWiki\Revision\SlotRecord;
+use MediaWiki\Title\Title;
 
 class PageEncryption {
 
@@ -325,6 +326,7 @@ class PageEncryption {
 		try {
 			self::getUser()->getId();
 		} catch ( Exception $e ) {
+			// @phpcs:disable MediaWiki.Usage.AssignmentInReturn
 			return self::$cachedMockUpRev[$cacheKey] = $rev;
 		}
 
@@ -460,28 +462,30 @@ class PageEncryption {
 		];
 
 		return self::$cachedMockUpRev[$cacheKey] = new RevisionStoreRecord( $title, $user, $comment, (object)$row, $slots );
+		// @phpcs:enable
 	}
 
 	/**
-	 * @return string
+	 * @return Key|false
 	 */
 	public static function getUserKey() {
 		$context = RequestContext::getMain();
 		$request = $context->getRequest();
-		if ( !$user_key_encoded = $request->getCookie( self::$cookieUserKey ) ) {
+		$user_key_encoded = $request->getCookie( self::$cookieUserKey );
+		if ( !$user_key_encoded ) {
 			return false;
 		}
 		try {
-			$ret = Key::loadFromAsciiSafeString( $user_key_encoded );
+			return Key::loadFromAsciiSafeString( $user_key_encoded );
 		} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
 
 		}
-		return $ret;
+		return false;
 	}
 
 	/**
 	 * @param string $text
-	 * @param string $user_key
+	 * @param Key $user_key
 	 * @return false|string
 	 */
 	public static function decryptSymmetric( $text, $user_key ) {
@@ -495,7 +499,7 @@ class PageEncryption {
 
 	/**
 	 * @param string $text
-	 * @param string $user_key
+	 * @param Key $user_key
 	 * @return false|string
 	 */
 	public static function encryptSymmetric( $text, $user_key ) {
@@ -555,7 +559,7 @@ class PageEncryption {
 			$text = $content->getText();
 
 			do {
-				$password = self::random_str( 5 );
+				$password = self::randomStr( 5 );
 				$row['encrypted_password'] = self::encryptSymmetric( $password, $user_key );
 
 				$row_ = $dbr->selectRow(
@@ -683,7 +687,7 @@ class PageEncryption {
 	}
 
 	/**
-	 * @param string $user_id
+	 * @param int $user_id
 	 * @param string $password
 	 * @param string &$message
 	 * @param string &$protected_key_encoded
@@ -1049,7 +1053,10 @@ class PageEncryption {
 	 * @param string $keyspace to select from
 	 * @return string
 	 */
-	public static function random_str( $length, $keyspace = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' ) {
+	private static function randomStr(
+		int $length,
+		string $keyspace = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	): string {
 		$str = '';
 		$max = mb_strlen( $keyspace, '8bit' ) - 1;
 		if ( $max < 1 ) {

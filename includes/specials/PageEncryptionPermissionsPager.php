@@ -24,6 +24,7 @@
 
 use MediaWiki\Linker\LinkRenderer;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 
 class PageEncryptionPermissionsPager extends TablePager {
 

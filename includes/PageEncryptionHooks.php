@@ -28,6 +28,7 @@ if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
 
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 
 class PageEncryptionHooks {
 
@@ -236,7 +237,7 @@ class PageEncryptionHooks {
 	/**
 	 * @param EditPage $editpage
 	 */
-	public static function onAlternateEdit( EditPage $editpage ) {
+	public static function onAlternateEdit( $editpage ) {
 	}
 
 	/**
@@ -314,10 +315,10 @@ class PageEncryptionHooks {
 	 * @param int $revId
 	 * @param ParserOptions $options
 	 * @param bool $generateHtml
-	 * @param ParserOutput &$parserOutput
+	 * @param ParserOutput $parserOutput
 	 * @return void
 	 */
-	public static function onContentGetParserOutput( $content, $title, $revId, $options, $generateHtml, &$parserOutput ) {
+	public static function onContentGetParserOutput( $content, $title, $revId, $options, $generateHtml, $parserOutput ) {
 		if ( \PageEncryption::isEncryptedNamespace( $title ) ) {
 			// @see https://matrix.to/#/!NGZmJSwAAwbGRxhWwH:matrix.org/$_tv5PXROs5-J91qHYxA6dZT5mie5Tjx9-idKT_HCrzY?via=matrix.org&via=matrix.jembawan.com&via=gemeinsam.jetzt
 			$parserOutput->updateCacheExpiry( 0 );
@@ -372,7 +373,7 @@ class PageEncryptionHooks {
 	}
 
 	/**
-	 * @param Title &$title
+	 * @param Title $title
 	 * @param null $unused
 	 * @param OutputPage $output
 	 * @param User $user
@@ -380,7 +381,7 @@ class PageEncryptionHooks {
 	 * @param MediaWiki|MediaWiki\Actions\ActionEntryPoint $mediaWiki
 	 * @return void
 	 */
-	public static function onBeforeInitialize( \Title &$title, $unused, \OutputPage $output, \User $user, \WebRequest $request, $mediaWiki ) {
+	public static function onBeforeInitialize( $title, $unused, $output, $user, $request, $mediaWiki ) {
 		\PageEncryption::initialize( $user );
 	}
 
