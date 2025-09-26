@@ -1,12 +1,12 @@
 {
 	"name": "PageEncryption",
 	"author": "thomas-topway-it",
-	"version": "1.2",
+	"version": "1.2.1",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageEncryption",
 	"descriptionmsg": "pageencryption-extension-desc",
 	"license-name": "GPL-2.0-or-later",
 	"requires": {
-		"MediaWiki": ">= 1.39.4"
+		"MediaWiki": ">= 1.35.3"
 	},
 	"MessagesDirs": {
 		"PageEncryption": [
@@ -21,6 +21,9 @@
 		"SpecialPageEncryptionPermissions": "includes/specials/SpecialPageEncryptionPermissions.php",
 		"PageEncryptionApiSetEncryptionKeys": "includes/api/PageEncryptionApiSetEncryptionKeys.php",
 		"PageEncryptionApiCheckLatestVersion": "includes/api/PageEncryptionApiCheckLatestVersion.php"
+	},
+	"AutoloadNamespaces": {
+		"MediaWiki\\Extension\\PageEncryption\\Aliases\\": "includes/aliases/"
 	},
 	"ExtensionMessagesFiles": {
 		"PageEncryptionAlias": "PageEncryption.alias.php"

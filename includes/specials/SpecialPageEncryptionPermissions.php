@@ -24,8 +24,8 @@
 
 require_once __DIR__ . '/PageEncryptionPermissionsPager.php';
 
+use MediaWiki\Extension\EmailNotifications\Aliases\Title as TitleClass;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Title\Title;
 
 /**
  * A special page that lists protected pages
@@ -34,10 +34,10 @@ use MediaWiki\Title\Title;
  */
 class SpecialPageEncryptionPermissions extends SpecialPage {
 
-	/** @var Title */
+	/** @var Title|MediaWiki\Title\Title */
 	public $title;
 
-	/** @var Title */
+	/** @var Title|MediaWiki\Title\Title */
 	public $localTitle;
 
 	/** @var bool */
@@ -55,12 +55,17 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 	/** @var bool */
 	private $missingPublicKey;
 
+	/** @var MediaWiki\User\UserFactory */
+	private $userFactory;
+
 	/**
 	 * @inheritDoc
 	 */
 	public function __construct() {
 		$listed = true;
 		parent::__construct( 'PageEncryptionPermissions', '', $listed );
+
+		$this->userFactory = MediaWikiServices::getInstance()->getUserFactory();
 	}
 
 	/**
@@ -72,7 +77,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		$this->setHeaders();
 		$this->outputHeader();
 
-		$title = Title::newFromText( $par );
+		$title = TitleClass::newFromText( $par );
 
 		// !$title->isContentPage()
 		if ( $title && ( !$title->isKnown() || $title->isSpecialPage() ) ) {
@@ -364,7 +369,7 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		}
 
 		if ( !empty( $row['recipient_id'] ) ) {
-			$user_ = MediaWikiServices::getInstance()->getUserFactory()->newFromId( $row['recipient_id'] );
+			$user_ = $this->userFactory->newFromId( $row['recipient_id'] );
 			$username = $user_->getName();
 		} else {
 			$username = null;
@@ -413,15 +418,14 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		$dbr = \PageEncryption::getDB( DB_PRIMARY );
 		$id = $request->getVal( 'edit' );
 		$new = ( $id && $id === 'new' );
-		$title = ( array_key_exists( 'page', $data ) ? $title = Title::newFromText( $data['page'] )
+		$title = ( array_key_exists( 'page', $data ) ? $title = TitleClass::newFromText( $data['page'] )
 			: $this->title );
 
 		if ( array_key_exists( 'username', $data ) ) {
 			$type = 'asymmetric';
 			$this->missingPublicKey = false;
 
-			$recipient = MediaWikiServices::getInstance()->getUserFactory()
-				->newFromName( $data['username'] );
+			$recipient = $this->userFactory->newFromName( $data['username'] );
 
 			$public_key = \PageEncryption::getPublicKey( $recipient );
 

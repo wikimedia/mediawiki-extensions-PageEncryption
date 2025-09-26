@@ -19,16 +19,15 @@
  * @file
  * @ingroup extensions
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright ©2023-2024, https://wikisphere.org
+ * @copyright Copyright ©2023-2025, https://wikisphere.org
  */
 
 if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
 	include_once __DIR__ . '/../vendor/autoload.php';
 }
 
-use MediaWiki\Logger\LoggerFactory;
+// use MediaWiki\Extension\EmailNotifications\Aliases\Title as TitleClass;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Title\Title;
 
 class PageEncryptionHooks {
 
@@ -91,118 +90,93 @@ class PageEncryptionHooks {
 			return;
 		}
 
-		$dbLoadBalancerFactory = $services->getDBLoadBalancerFactory();
-		$blobStoreFactory = $services->getBlobStoreFactory();
-		$slotRoleRegistry = $services->getSlotRoleRegistry();
-		$nameTables = $services->getNameTableStoreFactory();
-		$cache = $services->getMainWANObjectCache();
-		$commentStore = $services->getCommentStore();
-		$actorMigration = $services->getActorMigration();
-		$logger = LoggerFactory::getInstance( 'RevisionStore' );
-		$contentHandlerFactory = $services->getContentHandlerFactory();
-		$hookContainer = $services->getHookContainer();
+		$revisionLookupManipulator = static function ( $previousService, $services ) {
+			$dbLoadBalancerFactory = $services->getDBLoadBalancerFactory();
+			$blobStoreFactory      = $services->getBlobStoreFactory();
+			$nameTables            = $services->getNameTableStoreFactory();
+			$cache                 = $services->getMainWANObjectCache();
+			$commentStore          = $services->getCommentStore();
+			$actorMigration        = $services->getActorMigration();
+			$contentHandlerFactory = $services->getContentHandlerFactory();
+			$hookContainer         = $services->getHookContainer();
+			$slotRoleRegistry      = $services->getSlotRoleRegistry();
 
-		$dbDomain = false;
-		// MW 1.35
-		if ( version_compare( MW_VERSION, '1.36', '<' ) ) {
-			$pageEncryptionRevisionLookup = new PageEncryptionRevisionLookup(
-				$dbLoadBalancerFactory->getMainLB( $dbDomain ),
-				$blobStoreFactory->newSqlBlobStore( $dbDomain ),
-				$cache, // Pass cache local to wiki; Leave cache sharing to RevisionStore.
-				$commentStore,
-				$nameTables->getContentModels( $dbDomain ),
-				$nameTables->getSlotRoles( $dbDomain ),
-				$slotRoleRegistry,
-				$actorMigration,
-				$contentHandlerFactory,
-				$hookContainer,
-				$dbDomain
-			);
+			$dbDomain = false;
+			$pageEncryptionRevisionLookup = null;
 
-		// MW 1.36 and MW 1.37 have the same interface
-		} elseif ( version_compare( MW_VERSION, '1.38', '<' ) ) {
-			$actorStoreFactory = $services->getActorStoreFactory();
-			$pageStoreFactory = $services->getPageStoreFactory();
-			$titleFactory = $services->getTitleFactory();
+			if ( version_compare( MW_VERSION, '1.36', '<' ) ) {
+				// MW 1.35
+				$pageEncryptionRevisionLookup = new PageEncryptionRevisionLookup(
+					$dbLoadBalancerFactory->getMainLB( $dbDomain ),
+					$blobStoreFactory->newSqlBlobStore( $dbDomain ),
+					$cache,	// Pass cache local to wiki; Leave cache sharing to RevisionStore.
+					$commentStore,
+					$nameTables->getContentModels( $dbDomain ),
+					$nameTables->getSlotRoles( $dbDomain ),
+					$slotRoleRegistry,
+					$actorMigration,
+					$contentHandlerFactory,
+					$hookContainer,
+					$dbDomain
+				);
 
-			$pageEncryptionRevisionLookup = new PageEncryptionRevisionLookup(
-				$dbLoadBalancerFactory->getMainLB( $dbDomain ),
-				$blobStoreFactory->newSqlBlobStore( $dbDomain ),
-				$cache, // Pass cache local to wiki; Leave cache sharing to RevisionStore.
-				$commentStore,
-				$nameTables->getContentModels( $dbDomain ),
-				$nameTables->getSlotRoles( $dbDomain ),
-				$slotRoleRegistry,
-				$actorMigration,
-				$actorStoreFactory->getActorStore( $dbDomain ),
-				$contentHandlerFactory,
-				$pageStoreFactory->getPageStore( $dbDomain ),
-				$titleFactory,
-				$hookContainer,
-				$dbDomain
-			);
+			} elseif ( version_compare( MW_VERSION, '1.38', '<' ) ) {
+				// MW 1.36–1.37
+				$actorStoreFactory = $services->getActorStoreFactory();
+				$pageStoreFactory  = $services->getPageStoreFactory();
+				$titleFactory      = $services->getTitleFactory();
 
-		// MW 1.38, 1.39 and 1.40 have the same interface
-		} elseif ( version_compare( MW_VERSION, '1.42', '<' ) ) {
-			$localCache = $services->getLocalServerObjectCache();
-			$actorStoreFactory = $services->getActorStoreFactory();
-			$pageStoreFactory = $services->getPageStoreFactory();
-			$titleFactory = $services->getTitleFactory();
+				$pageEncryptionRevisionLookup = new PageEncryptionRevisionLookup(
+					$dbLoadBalancerFactory->getMainLB( $dbDomain ),
+					$blobStoreFactory->newSqlBlobStore( $dbDomain ),
+					$cache,
+					$commentStore,
+					$nameTables->getContentModels( $dbDomain ),
+					$nameTables->getSlotRoles( $dbDomain ),
+					$slotRoleRegistry,
+					$actorMigration,
+					$actorStoreFactory->getActorStore( $dbDomain ),
+					$contentHandlerFactory,
+					$pageStoreFactory->getPageStore( $dbDomain ),
+					$titleFactory,
+					$hookContainer,
+					$dbDomain
+				);
 
-			$pageEncryptionRevisionLookup = new PageEncryptionRevisionLookup(
-				$dbLoadBalancerFactory->getMainLB( $dbDomain ),
-				$blobStoreFactory->newSqlBlobStore( $dbDomain ),
-				$cache, // Pass cache local to wiki; Leave cache sharing to RevisionStore.
-				$localCache,
-				$commentStore,
-				$nameTables->getContentModels( $dbDomain ),
-				$nameTables->getSlotRoles( $dbDomain ),
-				$slotRoleRegistry,
+			} else {
+				// MW 1.38+
+				$localCache        = $services->getLocalServerObjectCache();
+				$actorStoreFactory = $services->getActorStoreFactory();
+				$pageStoreFactory  = $services->getPageStoreFactory();
+				$titleFactory      = $services->getTitleFactory();
 
-				$actorMigration,
-				$actorStoreFactory->getActorStore( $dbDomain ),
-				$contentHandlerFactory,
-				$pageStoreFactory->getPageStore( $dbDomain ),
-				$titleFactory,
-				$hookContainer,
-				$dbDomain, // $wikiId = WikiAwareEntity::LOCAL
-			);
+				$pageEncryptionRevisionLookup = new PageEncryptionRevisionLookup(
+					$dbLoadBalancerFactory->getMainLB( $dbDomain ),
+					$blobStoreFactory->newSqlBlobStore( $dbDomain ),
+					$cache,
+					$localCache,
+					$commentStore,
+					$nameTables->getContentModels( $dbDomain ),
+					$nameTables->getSlotRoles( $dbDomain ),
+					$slotRoleRegistry,
+					$actorStoreFactory->getActorStore( $dbDomain ),
+					$contentHandlerFactory,
+					$pageStoreFactory->getPageStore( $dbDomain ),
+					$titleFactory,
+					$hookContainer,
+					$dbDomain
+				);
+			}
 
-		} else {
-			$localCache = $services->getLocalServerObjectCache();
-			$actorStoreFactory = $services->getActorStoreFactory();
-			$pageStoreFactory = $services->getPageStoreFactory();
-			$titleFactory = $services->getTitleFactory();
-
-			$pageEncryptionRevisionLookup = new PageEncryptionRevisionLookup(
-				$dbLoadBalancerFactory->getMainLB( $dbDomain ),
-				$blobStoreFactory->newSqlBlobStore( $dbDomain ),
-				$cache, // Pass cache local to wiki; Leave cache sharing to RevisionStore.
-				$localCache,
-				$commentStore,
-				$nameTables->getContentModels( $dbDomain ),
-				$nameTables->getSlotRoles( $dbDomain ),
-				$slotRoleRegistry,
-				$actorStoreFactory->getActorStore( $dbDomain ),
-				$contentHandlerFactory,
-				$pageStoreFactory->getPageStore( $dbDomain ),
-				$titleFactory,
-				$hookContainer,
-				$dbDomain, // $wikiId = WikiAwareEntity::LOCAL
-			);
-		}
-
-		$services->redefineService( 'RevisionLookup', static function () use( $pageEncryptionRevisionLookup ) {
 			return $pageEncryptionRevisionLookup;
-		} );
+		};
 
-		$services->redefineService( 'RevisionStore', static function () use( $pageEncryptionRevisionLookup ) {
-			return $pageEncryptionRevisionLookup;
-		} );
+		$services->addServiceManipulator( 'RevisionLookup', $revisionLookupManipulator );
+		$services->addServiceManipulator( 'RevisionStore', $revisionLookupManipulator );
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|MediaWiki\Title\Title $title
 	 * @param User $user
 	 * @param string $action
 	 * @param array|string|MessageSpecifier &$result
@@ -251,7 +225,9 @@ class PageEncryptionHooks {
 	 */
 	public static function onMultiContentSave( MediaWiki\Revision\RenderedRevision $renderedRevision, MediaWiki\User\UserIdentity $user, CommentStoreComment $summary, $flags, Status $hookStatus ) {
 		$revisionRecord = $renderedRevision->getRevision();
-		$title = $revisionRecord->getPageAsLinkTarget();
+		$titleTarget = $revisionRecord->getPageAsLinkTarget();
+		$titleFactory = MediaWikiServices::getInstance()->getTitleFactory();
+		$title = $titleFactory->newFromLinkTarget( $titleTarget );
 
 		if ( !\PageEncryption::isEncryptedNamespace( $title ) ) {
 			return;
@@ -311,7 +287,7 @@ class PageEncryptionHooks {
 
 	/**
 	 * @param Content $content
-	 * @param Title $title
+	 * @param Title|MediaWiki\Title\Title $title
 	 * @param int $revId
 	 * @param ParserOptions $options
 	 * @param bool $generateHtml
@@ -328,7 +304,7 @@ class PageEncryptionHooks {
 	/**
 	 * @param ParserCache $parserCache
 	 * @param ParserOutput $parserOutput
-	 * @param Title $title
+	 * @param Title|MediaWiki\Title\Title $title
 	 * @param ParserOptions $parserOptions
 	 * @param int $revId
 	 * @return void
@@ -373,7 +349,7 @@ class PageEncryptionHooks {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|MediaWiki\Title\Title $title
 	 * @param null $unused
 	 * @param OutputPage $output
 	 * @param User $user

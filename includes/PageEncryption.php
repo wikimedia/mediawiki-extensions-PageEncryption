@@ -18,19 +18,20 @@
  * @file
  * @ingroup extensions
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright ©2023-2024, https://wikisphere.org
+ * @copyright Copyright ©2023-2025, https://wikisphere.org
  */
 
 use Defuse\Crypto\Crypto;
 use Defuse\Crypto\Key;
 use Defuse\Crypto\KeyProtectedByPassword;
+use MediaWiki\Extension\EmailNotifications\Aliases\Html as HtmlClass;
+// use MediaWiki\Extension\EmailNotifications\Aliases\Title as TitleClass;
 use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\MutableRevisionSlots;
 use MediaWiki\Revision\RevisionStore;
 use MediaWiki\Revision\RevisionStoreRecord;
 use MediaWiki\Revision\SlotRecord;
-use MediaWiki\Title\Title;
 
 class PageEncryption {
 
@@ -331,10 +332,14 @@ class PageEncryption {
 		}
 
 		if ( method_exists( RevisionStore::class, 'getPage' ) ) {
-			$title = $rev->getPage();
+			$pageIdentity = $rev->getPage();
 		} else {
-			$title = $rev->getPageAsLinkTarget();
+			$pageIdentity = $rev->getPageAsLinkTarget();
 		}
+
+		$titleFactory = MediaWikiServices::getInstance()->getTitleFactory();
+		$title = $titleFactory->newFromPageIdentity( $pageIdentity );
+
 		$isSamePage = ( RequestContext::getMain()->getTitle() === $title );
 		if ( array_key_exists( $cacheKey, self::$cachedMockUpRev ) ) {
 			return self::$cachedMockUpRev[$cacheKey];
@@ -523,7 +528,7 @@ class PageEncryption {
 
 	/**
 	 * @param User $user
-	 * @param Title $title
+	 * @param Title|MediaWiki\Title\Title $title
 	 * @param string $expiration_date
 	 * @param int|null $id
 	 * @return bool
@@ -586,7 +591,7 @@ class PageEncryption {
 
 	/**
 	 * @param User $user
-	 * @param Title $title
+	 * @param Title|MediaWiki\Title\Title $title
 	 * @param User $recipient
 	 * @param string $public_key
 	 * @param string $expiration_date
@@ -786,7 +791,7 @@ class PageEncryption {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|MediaWiki\Title\Title $title
 	 * @return bool
 	 */
 	public static function isEncryptedNamespace( $title ) {
@@ -802,7 +807,7 @@ class PageEncryption {
 		$toUrlencoded = wfUrlencode( str_replace( ' ', '_', $to ) );
 		$helpUrl = "https://www.mediawiki.org/wiki/Special:MyLanguage/$toUrlencoded";
 		$text = '';
-		$link = Html::rawElement(
+		$link = HtmlClass::rawElement(
 			'a',
 			[
 				'href' => $helpUrl,
@@ -835,7 +840,7 @@ class PageEncryption {
 
 	/**
 	 * @param OutputPage $outputPage
-	 * @param Title $title
+	 * @param Title|MediaWiki\Title\Title $title
 	 * @param User $user
 	 */
 	public static function addJsConfigVars( $outputPage, $title, $user ) {
@@ -925,7 +930,7 @@ class PageEncryption {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|MediaWiki\Title\Title $title
 	 * @return bool
 	 */
 	public static function isKnownArticle( $title ) {
@@ -937,7 +942,7 @@ class PageEncryption {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|MediaWiki\Title\Title $title
 	 * @param User|null $user
 	 * @return bool
 	 */
@@ -1017,7 +1022,7 @@ class PageEncryption {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|MediaWiki\Title\Title $title
 	 * @return void
 	 */
 	public static function getWikiPage( $title ) {

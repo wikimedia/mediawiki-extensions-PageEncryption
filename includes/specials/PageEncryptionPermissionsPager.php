@@ -19,16 +19,18 @@
  * @file
  * @ingroup extensions
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright ©2023-2024, https://wikisphere.org
+ * @copyright Copyright ©2023-2025, https://wikisphere.org
  */
 
+use MediaWiki\Extension\EmailNotifications\Aliases\Html as HtmlClass;
+use MediaWiki\Extension\EmailNotifications\Aliases\Linker as LinkerClass;
+use MediaWiki\Extension\EmailNotifications\Aliases\Title as TitleClass;
 use MediaWiki\Linker\LinkRenderer;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Title\Title;
 
 class PageEncryptionPermissionsPager extends TablePager {
 
-	/** @var title */
+	/** @var Title|MediaWiki\Title\Title */
 	private $title;
 
 	/** @var request */
@@ -36,6 +38,9 @@ class PageEncryptionPermissionsPager extends TablePager {
 
 	/** @var parentClass */
 	private $parentClass;
+
+	/** @var MediaWiki\User\UserFactory */
+	private $userFactory;
 
 	/**
 	 * @param SpecialPageEncryption $parentClass
@@ -46,6 +51,7 @@ class PageEncryptionPermissionsPager extends TablePager {
 		$this->title = $parentClass->title;
 		$this->request = $request;
 		$this->parentClass = $parentClass;
+		$this->userFactory = MediaWikiServices::getInstance()->getUserFactory();
 
 		parent::__construct( $parentClass->getContext(), $linkRenderer );
 	}
@@ -105,13 +111,13 @@ class PageEncryptionPermissionsPager extends TablePager {
 		$formatted = '';
 		switch ( $field ) {
 			case 'created_by':
-				$user = MediaWikiServices::getInstance()->getUserFactory()->newFromId( $row->created_by );
+				$user = $this->userFactory->newFromId( $row->created_by );
 				$formatted = $user->getName();
 				break;
 
 			case 'recipient_id':
 				if ( $row->access_type === 'asymmetric' ) {
-					$user = MediaWikiServices::getInstance()->getUserFactory()->newFromId( $row->recipient_id );
+					$user = $this->userFactory->newFromId( $row->recipient_id );
 					$formatted = $user->getName();
 				} else {
 					$formatted = 'n/a';
@@ -120,13 +126,13 @@ class PageEncryptionPermissionsPager extends TablePager {
 
 			case 'page_id':
 				$formatted = '';
-				$title = Title::newFromID( $row->page_id );
+				$title = TitleClass::newFromID( $row->page_id );
 				$linkRenderer = $this->getLinkRenderer();
 				$formatted = $linkRenderer->makeLink( $title );
 				break;
 
 			case 'revision':
-				$title = Title::newFromID( $row->page_id );
+				$title = TitleClass::newFromID( $row->page_id );
 				$wikiPage = \PageEncryption::getWikiPage( $title );
 				$revisionRecord = $wikiPage->getRevisionRecord();
 
@@ -141,7 +147,7 @@ class PageEncryptionPermissionsPager extends TablePager {
 
 			case 'password':
 				if ( (int)$row->created_by === $this->parentClass->getUser()->getId() ) {
-					$title = Title::newFromID( $row->page_id );
+					$title = TitleClass::newFromID( $row->page_id );
 
 					if ( $row->access_type === 'symmetric' ) {
 						$user_key = \PageEncryption::getUserKey();
@@ -149,7 +155,7 @@ class PageEncryptionPermissionsPager extends TablePager {
 							$password = \PageEncryption::decryptSymmetric( $row->encrypted_password, $user_key );
 
 							$formatted =
-								// Html::rawElement(
+								// HtmlClass::rawElement(
 								// 'span',
 								// [
 								// 	'data-password' => $password,
@@ -158,7 +164,7 @@ class PageEncryptionPermissionsPager extends TablePager {
 								// $this->msg( 'pageencryption-managepermissions-pager-button-password-copytoclipboard' )->text()
 							// ) .
 							// . '&nbsp;' .
-							 Html::rawElement(
+							 HtmlClass::rawElement(
 								'span',
 								[
 									'data-url' => wfAppendQuery( $title->getFullURL(), 'acode=' . $password ),
@@ -170,7 +176,7 @@ class PageEncryptionPermissionsPager extends TablePager {
 							$formatted = 'user-key not set';
 						}
 					} else {
-						$formatted = Html::rawElement(
+						$formatted = HtmlClass::rawElement(
 							'span',
 							[
 								'data-url' => $title->getFullURL(),
@@ -211,7 +217,7 @@ class PageEncryptionPermissionsPager extends TablePager {
 					. $this->msg( 'pageencryption-managepermissions-pager-button-edit' )->text() . '</span>';
 				$title = SpecialPage::getTitleFor( 'PageEncryptionPermissions', $this->title );
 				$query = [ 'edit' => $row->id, 'type' => $row->access_type ];
-				$formatted = Linker::link( $title, $link, [], $query );
+				$formatted = LinkerClass::link( $title, $link, [], $query );
 				break;
 
 			default:
@@ -243,7 +249,7 @@ class PageEncryptionPermissionsPager extends TablePager {
 			$page = $this->request->getVal( 'page' );
 
 			if ( is_int( $page ) ) {
-				$title_ = Title::newFromText( $page );
+				$title_ = TitleClass::newFromText( $page );
 				$pageId = $title_->getArticleId();
 			}
 
@@ -254,8 +260,7 @@ class PageEncryptionPermissionsPager extends TablePager {
 				$created_by_ = $this->request->getVal( 'created_by' );
 
 				if ( !empty( $created_by_ ) ) {
-					$user_ = MediaWikiServices::getInstance()->getUserFactory()
-						->newFromName( $created_by_ );
+					$user_ = $this->userFactory->newFromName( $created_by_ );
 					$created_by = $user_->getId();
 				}
 			}
@@ -319,7 +324,7 @@ SELECT id, created_by, page_id, revision_id, recipient_id, null as encrypted_pas
 			}
 
 			if ( !empty( $page ) ) {
-				$title = Title::newFromText( $page );
+				$title = TitleClass::newFromText( $page );
 				$conds[ 'page_id' ] = $title->getArticleId();
 			}
 		}
