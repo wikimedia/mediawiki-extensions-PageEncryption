@@ -20,6 +20,9 @@
  */
 
 $( function () {
+	var Config = mw.config.get( 'pageencryption-config' );
+	var canManagePermissions = Config.canManageEncryption;
+
 	$( '.pageencryption-managepermissions-pager-button-show-url' ).on(
 		'click',
 

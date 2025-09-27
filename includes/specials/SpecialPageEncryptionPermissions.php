@@ -26,6 +26,7 @@ require_once __DIR__ . '/PageEncryptionPermissionsPager.php';
 
 use MediaWiki\Extension\EmailNotifications\Aliases\Title as TitleClass;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Parser\ParserOptions;
 
 /**
  * A special page that lists protected pages
@@ -177,7 +178,10 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 		}
 
 		if ( $pager->getNumRows() ) {
-			$out->addParserOutputContent( $pager->getFullOutput() );
+			$out->addParserOutputContent(
+				$pager->getFullOutput(),
+				ParserOptions::newFromContext( $this->getContext() )
+			);
 
 		} else {
 			$out->addWikiMsg( 'pageencryption-managepermissions-table-empty' );

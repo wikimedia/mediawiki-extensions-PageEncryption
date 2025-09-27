@@ -57,8 +57,13 @@ class PageEncryptionApiSetEncryptionKeys extends ApiBase {
 
 		if ( $row ) {
 			if ( !$params['reset-key'] ) {
-				$message = null;
-				$res = \PageEncryption::setUserKey( $row['protected_key'], $params['password'], $message );
+				$errorMessage = null;
+				$res = \PageEncryption::setUserKey( $row['protected_key'], $params['password'], $errorMessage );
+
+				if ( $res === false ) {
+						$result->addValue( [ $this->getModuleName() ], 'message', $errorMessage );
+						return;
+				}
 				// close dialog or ask password again
 				$result->addValue( [ $this->getModuleName() ], 'action', 'enter-password', ApiResult::OVERRIDE );
 				$result->addValue( [ $this->getModuleName() ], 'message', $message );

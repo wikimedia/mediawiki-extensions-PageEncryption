@@ -246,7 +246,9 @@ class PageEncryptionHooks {
 		$modelId = $contentHandler->getModelID();
 
 		$text = $content->getText();
-		$user_key = \PageEncryption::getUserKey();
+
+		$errorMessage = null;
+		$user_key = \PageEncryption::getUserKey( $errorMessage );
 
 		if ( $user_key === false ) {
 			throw new MWException( 'User-key not set' );

@@ -107,5 +107,6 @@
 	"pageencryption-jsmodule-dialog-password": "Password",
 	"pageencryption-jsmodule-dialog-password-confirmation": "Repeat password",
 	"pageencryption-jsmodule-deleteitemconfirm": "Revoke access?",
-	"pageencryption-jsmodule-lost-password": "Lost password?"
+	"pageencryption-jsmodule-lost-password": "Lost password?",
+	"pageencryption-error-defuse-lib-not-found": "Required lib not found. Run \"composer install --no-dev\" in the extension folder"
 }

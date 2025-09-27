@@ -303,7 +303,6 @@ $( function () {
 							new mw.Api()
 								.postWithToken( 'csrf', postData )
 								.done( function ( res ) {
-									// console.log("res", res);
 									if ( !( payload.action in res ) ) {
 										reject(
 											new OO.ui.Error( res, {
@@ -314,11 +313,15 @@ $( function () {
 									} else {
 										var value = res[ payload.action ];
 										if ( value.message !== null ) {
+											// reject(
+											// 	new OO.ui.MessageWidget( {
+											// 		type: 'error',
+											// 		// inline: true,
+											// 		label: new OO.ui.HtmlSnippet( value.message )
+											// 	} )
+											// );
 											reject(
-												new OO.ui.Error( value.message, {
-													recoverable: true,
-													warning: false
-												} )
+												new OO.ui.Error( value.message, { recoverable: true, warning: false } )
 											);
 										} else {
 											if ( value.action === 'new-record' ) {
@@ -405,7 +408,6 @@ $( function () {
 		return;
 	}
 
-	// && Config.isEditor
 	if ( Config.isEncryptedNamespace &&
 		( Config.canHandleEncryption || Config.canManageEncryption ) &&
 		( !Config.protectedKeyIsSet || !Config.userkeyCookieIsSet )

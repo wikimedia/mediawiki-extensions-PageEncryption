@@ -150,7 +150,8 @@ class PageEncryptionPermissionsPager extends TablePager {
 					$title = TitleClass::newFromID( $row->page_id );
 
 					if ( $row->access_type === 'symmetric' ) {
-						$user_key = \PageEncryption::getUserKey();
+						$errorMessage = null;
+						$user_key = \PageEncryption::getUserKey( $errorMessage );
 						if ( $user_key ) {
 							$password = \PageEncryption::decryptSymmetric( $row->encrypted_password, $user_key );
 

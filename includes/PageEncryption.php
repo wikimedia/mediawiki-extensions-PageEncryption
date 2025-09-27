@@ -281,7 +281,8 @@ class PageEncryption {
 
 		// *** solution 1
 		// $skpk = self::keyPairFromKey( $password );
-		$user_key = self::getUserKey();
+		$errorMessage = null;
+		$user_key = self::getUserKey( $errorMessage );
 
 		if ( $user_key === false ) {
 			return false;
@@ -339,6 +340,10 @@ class PageEncryption {
 
 		$titleFactory = MediaWikiServices::getInstance()->getTitleFactory();
 		$title = $titleFactory->newFromPageIdentity( $pageIdentity );
+
+		if ( !self::isEncryptedNamespace( $title ) ) {
+			return self::$cachedMockUpRev[$cacheKey] = $rev;
+		}
 
 		$isSamePage = ( RequestContext::getMain()->getTitle() === $title );
 		if ( array_key_exists( $cacheKey, self::$cachedMockUpRev ) ) {
@@ -398,7 +403,8 @@ class PageEncryption {
 			}
 
 		} else {
-			$user_key = self::getUserKey();
+			$errorMessage = null;
+			$user_key = self::getUserKey( $errorMessage );
 			if ( $user_key !== false ) {
 				$ret = self::decryptSymmetric( $text, $user_key );
 			} else {
@@ -471,9 +477,14 @@ class PageEncryption {
 	}
 
 	/**
+	 * @param string &$errorMessage
 	 * @return Key|false
 	 */
-	public static function getUserKey() {
+	public static function getUserKey( &$errorMessage ) {
+		if ( !class_exists( 'Defuse\Crypto\Key' ) ) {
+			$errorMessage = wfMessage( 'pageencryption-error-defuse-lib-not-found' )->parse();
+			return false;
+		}
 		$context = RequestContext::getMain();
 		$request = $context->getRequest();
 		$user_key_encoded = $request->getCookie( self::$cookieUserKey );
@@ -482,8 +493,9 @@ class PageEncryption {
 		}
 		try {
 			return Key::loadFromAsciiSafeString( $user_key_encoded );
-		} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
 
+		} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
+			$errorMessage = $ex->getMessage();
 		}
 		return false;
 	}
@@ -548,7 +560,8 @@ class PageEncryption {
 			$wikiPage = self::getWikiPage( $title );
 			$revisionRecord = $wikiPage->getRevisionRecord();
 			$row['revision_id'] = $revisionRecord->getId();
-			$user_key = self::getUserKey();
+			$errorMessage = null;
+			$user_key = self::getUserKey( $errorMessage );
 
 			if ( $user_key === false ) {
 				throw new MWException( 'user-key not set' );
@@ -614,7 +627,8 @@ class PageEncryption {
 			$wikiPage = self::getWikiPage( $title );
 			$revisionRecord = $wikiPage->getRevisionRecord();
 			$row['revision_id'] = $revisionRecord->getId();
-			$user_key = self::getUserKey();
+			$errorMessage = null;
+			$user_key = self::getUserKey( $errorMessage );
 
 			if ( $user_key === false ) {
 				throw new MWException( 'user-key not set' );
@@ -632,7 +646,6 @@ class PageEncryption {
 			$nonce = \random_bytes( \SODIUM_CRYPTO_BOX_NONCEBYTES );
 			$row['nonce'] = $nonce;
 
-			$user_key = self::getUserKey();
 			$row_ = self::getEncryptionKeyRecord( $user->getId() );
 			$encrypted_private_key = $row_['encrypted_private_key'];
 			$sender_secret_key = self::decryptSymmetric( $encrypted_private_key, $user_key );
@@ -655,10 +668,14 @@ class PageEncryption {
 	/**
 	 * @param string $protected_key
 	 * @param string $password
-	 * @param string &$message
+	 * @param string &$errorMessage
 	 * @return bool
 	 */
-	public static function setUserKey( $protected_key, $password, &$message ) {
+	public static function setUserKey( $protected_key, $password, &$errorMessage ) {
+		if ( !class_exists( 'Defuse\Crypto\Key' ) ) {
+			$errorMessage = wfMessage( 'pageencryption-error-defuse-lib-not-found' )->parse();
+			return false;
+		}
 		$protected_key = KeyProtectedByPassword::loadFromAsciiSafeString( $protected_key );
 
 		// @see https://github.com/defuse/php-encryption/blob/master/docs/classes/Crypto.md
@@ -666,12 +683,12 @@ class PageEncryption {
 			$user_key = $protected_key->unlockKey( $password );
 			$user_key_encoded = $user_key->saveToAsciiSafeString();
 		} catch ( Defuse\Crypto\Exception\WrongKeyOrModifiedCiphertextException $ex ) {
-			$message = wfMessage( 'pageencryption-error-message-password-doesnotmatch' )->text();
+			$errorMessage = wfMessage( 'pageencryption-error-message-password-doesnotmatch' )->text();
 			return false;
 		}
 		$res = self::setCookie( $user_key_encoded );
 		if ( $res === false ) {
-			$message = wfMessage( 'pageencryption-error-message-cannot-set-cookie' )->text();
+			$errorMessage = wfMessage( 'pageencryption-error-message-cannot-set-cookie' )->text();
 		}
 
 		return $res;
@@ -853,16 +870,27 @@ class PageEncryption {
 		$isEditor = self::isEditor( $title, $user );
 		$public_key = self::getPublicKey( $user );
 
+		$isEncryptedNamespace = false;
+		if ( $title->isSpecialPage() && $title->getText() === 'PageEncryptionPermissions' ) {
+			$isEncryptedNamespace = true;
+
+		} else {
+			$isEncryptedNamespace = self::isEncryptedNamespace( $title );
+		}
+
+		$errorMessage = null;
+		$userKey = self::getUserKey( $errorMessage );
+
 		$outputPage->addJsConfigVars( [
 			// httpOnly cookies cannot be accessed client-side, so we
 			// set a specific variable
 			'pageencryption-config' => [
-				'isEncryptedNamespace' => self::isEncryptedNamespace( $title ),
+				'isEncryptedNamespace' => $isEncryptedNamespace,
 				'canHandleEncryption' => $user->isAllowed( 'pageencryption-can-handle-encryption' ),
 				'canManageEncryption' => $user->isAllowed( 'pageencryption-can-manage-encryption' ),
 				'isEditor' => $isEditor,
 				'publicKeyIsSet' => $public_key !== null,
-				'userkeyCookieIsSet' => self::getUserKey() !== false,
+				'userkeyCookieIsSet' => ( $userKey !== false ),
 				'protectedKeyIsSet' => is_array( self::getEncryptionKeyRecord( $user->getId() ) ),
 			]
 		] );
