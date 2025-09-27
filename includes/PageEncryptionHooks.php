@@ -26,7 +26,7 @@ if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
 	include_once __DIR__ . '/../vendor/autoload.php';
 }
 
-// use MediaWiki\Extension\EmailNotifications\Aliases\Title as TitleClass;
+// use MediaWiki\Extension\PageEncryption\Aliases\Title as TitleClass;
 use MediaWiki\MediaWikiServices;
 
 class PageEncryptionHooks {

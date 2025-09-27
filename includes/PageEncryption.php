@@ -24,8 +24,8 @@
 use Defuse\Crypto\Crypto;
 use Defuse\Crypto\Key;
 use Defuse\Crypto\KeyProtectedByPassword;
-use MediaWiki\Extension\EmailNotifications\Aliases\Html as HtmlClass;
-// use MediaWiki\Extension\EmailNotifications\Aliases\Title as TitleClass;
+use MediaWiki\Extension\PageEncryption\Aliases\Html as HtmlClass;
+// use MediaWiki\Extension\PageEncryption\Aliases\Title as TitleClass;
 use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\MutableRevisionSlots;

@@ -22,9 +22,9 @@
  * @copyright Copyright ©2023-2025, https://wikisphere.org
  */
 
-use MediaWiki\Extension\EmailNotifications\Aliases\Html as HtmlClass;
-use MediaWiki\Extension\EmailNotifications\Aliases\Linker as LinkerClass;
-use MediaWiki\Extension\EmailNotifications\Aliases\Title as TitleClass;
+use MediaWiki\Extension\PageEncryption\Aliases\Html as HtmlClass;
+use MediaWiki\Extension\PageEncryption\Aliases\Linker as LinkerClass;
+use MediaWiki\Extension\PageEncryption\Aliases\Title as TitleClass;
 use MediaWiki\Linker\LinkRenderer;
 use MediaWiki\MediaWikiServices;
 
