@@ -13,7 +13,6 @@
 			"i18n"
 		]
 	},
-	"callback": "PageEncryptionHooks::onRegistration",
 	"AutoloadClasses": {
 		"PageEncryptionRevisionLookup": "includes/PageEncryptionRevisionLookup.php",
 		"PageEncryptionHooks": "includes/PageEncryptionHooks.php",
@@ -28,6 +27,7 @@
 	"ExtensionMessagesFiles": {
 		"PageEncryptionAlias": "PageEncryption.alias.php"
 	},
+	"callback": "PageEncryptionHooks::onRegistration",
 	"Hooks": {
 		"BeforeInitialize": "PageEncryptionHooks::onBeforeInitialize",
 		"AlternateEdit": "PageEncryptionHooks::onAlternateEdit",

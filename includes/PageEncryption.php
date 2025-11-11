@@ -42,7 +42,7 @@ class PageEncryption {
 	public static $userGroupManager;
 
 	/** @var int */
-	public static $encryptedNamespace = 2246;
+	public static $encryptedNamespace = NS_PAGEENCRYPTION;
 
 	/** @var string */
 	public static $cookieUserKey = 'pageencryption-userkey';

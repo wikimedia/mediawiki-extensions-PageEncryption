@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS /*_*/pageencryption_symmetric (
   `revision_id` int(11) NULL,
   `protected_key` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
   `encrypted_password` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
-  `encrypted_content` BLOB NOT NULL,
+  `encrypted_content` MEDIUMBLOB NOT NULL,
   `expiration_date` datetime NULL,
   `viewed` datetime NULL,
   `viewed_metadata` TEXT NULL,

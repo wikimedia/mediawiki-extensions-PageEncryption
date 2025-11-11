@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS /*_*/pageencryption_asymmetric (
   `revision_id` int(11) NULL,
   `recipient_id` int(11) NOT NULL,
   `nonce` TINYBLOB NOT NULL,
-  `encrypted_content` BLOB NOT NULL,
+  `encrypted_content` MEDIUMBLOB NOT NULL,
   `expiration_date` datetime NULL,
   `viewed` datetime NULL,
   `viewed_metadata` TEXT NULL,

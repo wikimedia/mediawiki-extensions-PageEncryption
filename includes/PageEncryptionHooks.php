@@ -38,6 +38,28 @@ class PageEncryptionHooks {
 	public static $admins = [ 'sysop', 'bureaucrat', 'interface-admin' ];
 
 	/**
+	 * @param array $credits
+	 * @return void
+	 */
+	public static function onRegistration( $credits = [] ) {
+		// Initialise the 'VisualEditorAvailableNamespaces' setting
+		$GLOBALS['wgVisualEditorAvailableNamespaces'][self::$encryptedNamespace] = true;
+	}
+
+	/**
+	 * @param Title|MediaWiki\Title\Title $title
+	 * @param null $unused
+	 * @param OutputPage $output
+	 * @param User $user
+	 * @param WebRequest $request
+	 * @param MediaWiki|MediaWiki\Actions\ActionEntryPoint $mediaWiki
+	 * @return void
+	 */
+	public static function onBeforeInitialize( $title, $unused, $output, $user, $request, $mediaWiki ) {
+		\PageEncryption::initialize( $user );
+	}
+
+	/**
 	 * @param DatabaseUpdater|null $updater
 	 * @return void
 	 */
@@ -254,6 +276,13 @@ class PageEncryptionHooks {
 			throw new MWException( 'User-key not set' );
 		}
 
+		// already encrypted (this happens when changing the
+		// content model)
+		// @TODO find a better way
+		if ( \PageEncryption::decryptSymmetric( $text, $user_key ) !== false ) {
+			return;
+		}
+
 		$encryptedText = \PageEncryption::encryptSymmetric( $text, $user_key );
 
 		if ( $encryptedText === false ) {
@@ -335,32 +364,12 @@ class PageEncryptionHooks {
 	}
 
 	/**
-	 * Initialise the 'VisualEditorAvailableNamespaces' setting
-	 */
-	public static function onRegistration() {
-		$GLOBALS['wgVisualEditorAvailableNamespaces'][self::$encryptedNamespace] = true;
-	}
-
-	/**
 	 * @param User &$user User after logout (won't have name, ID, etc.)
 	 * @param string &$inject_html Any HTML to inject after the logout message.
 	 * @param string $oldName The text of the username that just logged out.
 	 */
 	public static function onUserLogoutComplete( &$user, &$inject_html, $oldName ) {
 		\PageEncryption::deleteCookie();
-	}
-
-	/**
-	 * @param Title|MediaWiki\Title\Title $title
-	 * @param null $unused
-	 * @param OutputPage $output
-	 * @param User $user
-	 * @param WebRequest $request
-	 * @param MediaWiki|MediaWiki\Actions\ActionEntryPoint $mediaWiki
-	 * @return void
-	 */
-	public static function onBeforeInitialize( $title, $unused, $output, $user, $request, $mediaWiki ) {
-		\PageEncryption::initialize( $user );
 	}
 
 	/**
