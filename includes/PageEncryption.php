@@ -468,9 +468,12 @@ class PageEncryption {
 			'rev_deleted' => $rev->getVisibility(),
 			'rev_parent_id' => $rev->getParentId(),
 			'rev_len' => $rev->getSize(),
-			'rev_sha1' => $rev->getSha1(),
 			'page_latest' => $rev->getId(),
 		];
+
+		if ( version_compare( MW_VERSION, '1.46', '<' ) ) {
+			$row['rev_sha1'] = $rev->getSha1();
+		}
 
 		return self::$cachedMockUpRev[$cacheKey] = new RevisionStoreRecord( $title, $user, $comment, (object)$row, $slots );
 		// @phpcs:enable
