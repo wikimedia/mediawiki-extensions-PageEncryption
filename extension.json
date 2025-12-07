@@ -60,7 +60,7 @@
 			"name": "Encrypted"
 		},
 		{
-			"id": 2277,
+			"id": 2247,
 			"constant": "NS_PAGEENCRYPTION_TALK",
 			"name": "Encrypted talk"
 		}
