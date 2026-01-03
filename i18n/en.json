@@ -7,9 +7,9 @@
 	"specialpages-group-pageencryption": "Page Encryption",
 	"pageencryption": "Page Encryption",
 
-	"right-pageencryption-can-manage-encryption": "can manage encryption",
+	"right-pageencryption-can-manage-encryption": "Manage encryption",
 	"action-pageencryption-can-manage-encryption": "manage encryption",
-	"right-pageencryption-can-handle-encryption": "can handle encryption",
+	"right-pageencryption-can-handle-encryption": "Handle encryption",
 	"action-pageencryption-can-handle-encryption": "handle encryption",
 
 	"group-pageencryption-admin": "PageEncryption admin",
