@@ -17,6 +17,7 @@
 		"PageEncryptionRevisionLookup": "includes/PageEncryptionRevisionLookup.php",
 		"PageEncryptionHooks": "includes/PageEncryptionHooks.php",
 		"PageEncryption": "includes/PageEncryption.php",
+		"PageEncryptionPermissionsPager": "includes/specials/PageEncryptionPermissionsPager.php",
 		"SpecialPageEncryptionPermissions": "includes/specials/SpecialPageEncryptionPermissions.php",
 		"PageEncryptionApiSetEncryptionKeys": "includes/api/PageEncryptionApiSetEncryptionKeys.php",
 		"PageEncryptionApiCheckLatestVersion": "includes/api/PageEncryptionApiCheckLatestVersion.php"
@@ -160,5 +161,6 @@
 			]
 		}
 	},
+	"load_composer_autoloader": true,
 	"manifest_version": 1
 }

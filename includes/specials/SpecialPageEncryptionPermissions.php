@@ -22,8 +22,6 @@
  * @copyright Copyright ©2023-2024, https://wikisphere.org
  */
 
-require_once __DIR__ . '/PageEncryptionPermissionsPager.php';
-
 use MediaWiki\Extension\PageEncryption\Aliases\Title as TitleClass;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Parser\ParserOptions;
