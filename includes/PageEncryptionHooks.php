@@ -165,8 +165,8 @@ class PageEncryptionHooks {
 					$dbDomain
 				);
 
-			} else {
-				// MW 1.38+
+			} elseif ( version_compare( MW_VERSION, '1.45', '<' ) ) {
+				// MW 1.38-1.44
 				$localCache        = $services->getLocalServerObjectCache();
 				$actorStoreFactory = $services->getActorStoreFactory();
 				$pageStoreFactory  = $services->getPageStoreFactory();
@@ -186,6 +186,31 @@ class PageEncryptionHooks {
 					$pageStoreFactory->getPageStore( $dbDomain ),
 					$titleFactory,
 					$hookContainer,
+					$dbDomain
+				);
+			} else {
+				// MW 1.45+
+				$localCache        = $services->getLocalServerObjectCache();
+				$actorStoreFactory = $services->getActorStoreFactory();
+				$pageStoreFactory  = $services->getPageStoreFactory();
+				$titleFactory      = $services->getTitleFactory();
+				$recentChangeLookup = $services->getRecentChangeLookup();
+
+				$pageEncryptionRevisionLookup = new PageEncryptionRevisionLookup(
+					$dbLoadBalancerFactory->getMainLB( $dbDomain ),
+					$blobStoreFactory->newSqlBlobStore( $dbDomain ),
+					$cache,
+					$localCache,
+					$commentStore,
+					$nameTables->getContentModels( $dbDomain ),
+					$nameTables->getSlotRoles( $dbDomain ),
+					$slotRoleRegistry,
+					$actorStoreFactory->getActorStore( $dbDomain ),
+					$contentHandlerFactory,
+					$pageStoreFactory->getPageStore( $dbDomain ),
+					$titleFactory,
+					$hookContainer,
+					$recentChangeLookup,
 					$dbDomain
 				);
 			}
