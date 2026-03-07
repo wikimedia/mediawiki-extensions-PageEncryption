@@ -23,8 +23,8 @@
  */
 
 use MediaWiki\Extension\PageEncryption\Aliases\Title as TitleClass;
-use MediaWiki\MediaWikiServices;
 use MediaWiki\Parser\ParserOptions;
+use MediaWiki\User\UserFactory;
 
 /**
  * A special page that lists protected pages
@@ -54,17 +54,19 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 	/** @var bool */
 	private $missingPublicKey;
 
-	/** @var MediaWiki\User\UserFactory */
+	/** @var UserFactory */
 	private $userFactory;
 
 	/**
 	 * @inheritDoc
 	 */
-	public function __construct() {
+	public function __construct(
+		UserFactory $userFactory,
+	) {
 		$listed = true;
 		parent::__construct( 'PageEncryptionPermissions', '', $listed );
 
-		$this->userFactory = MediaWikiServices::getInstance()->getUserFactory();
+		$this->userFactory = $userFactory;
 	}
 
 	/**

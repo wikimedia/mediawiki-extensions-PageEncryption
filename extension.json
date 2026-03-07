@@ -48,7 +48,12 @@
 		"OutputPageParserOutput": "PageEncryptionHooks::onOutputPageParserOutput"
 	},
 	"SpecialPages": {
-		"PageEncryptionPermissions": "SpecialPageEncryptionPermissions"
+		"PageEncryptionPermissions": {
+			"class": "SpecialPageEncryptionPermissions",
+			"services": [
+				"UserFactory"
+			]
+		}
 	},
 	"APIModules": {
 		"pageencryption-set-encryption-keys": "PageEncryptionApiSetEncryptionKeys",
