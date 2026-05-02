@@ -57,14 +57,10 @@ class SpecialPageEncryptionPermissions extends SpecialPage {
 	/** @var UserFactory */
 	private $userFactory;
 
-	/**
-	 * @inheritDoc
-	 */
 	public function __construct(
 		UserFactory $userFactory,
 	) {
-		$listed = true;
-		parent::__construct( 'PageEncryptionPermissions', '', $listed );
+		parent::__construct( 'PageEncryptionPermissions' );
 
 		$this->userFactory = $userFactory;
 	}
